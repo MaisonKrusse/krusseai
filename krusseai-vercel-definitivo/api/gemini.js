@@ -38,37 +38,43 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Falta configurar la variable GEMINI_API_KEY en Vercel.' });
     }
 
-    // Actualizado al modelo exigido por Google: gemini-3.8-flash
-    const selectedModel = 'gemini-3.8-flash';
+    // Sistema con múltiples modelos de respaldo automático si uno sufre alta demanda
+    const modelsToTry = ['gemini-3.8-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    
+    let googleResponse = null;
+    let data = null;
+    let lastError = '';
 
-    const googlePayload = {
-      contents: contents || []
-    };
+    for (const model of modelsToTry) {
+      googleResponse = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: contents || [],
+            ...(systemInstruction ? { system_instruction: systemInstruction } : {})
+          })
+        }
+      );
 
-    if (systemInstruction) {
-      googlePayload.system_instruction = systemInstruction;
-    }
-
-    const googleResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(googlePayload)
+      const textData = await googleResponse.text();
+      try {
+        data = JSON.parse(textData);
+      } catch (e) {
+        data = { error: { message: textData } };
       }
-    );
 
-    const textData = await googleResponse.text();
-    let data;
-    try {
-      data = JSON.parse(textData);
-    } catch (e) {
-      return res.status(500).json({ error: 'Respuesta inválida de Google (no es JSON): ' + textData.slice(0, 150) });
+      if (googleResponse.ok) {
+        break;
+      } else {
+        lastError = data.error?.message || 'Error desconocido';
+      }
     }
 
-    if (!googleResponse.ok) {
-      return res.status(googleResponse.status).json({ 
-        error: data.error?.message || 'Error devuelto por la API de Google Gemini' 
+    if (!googleResponse || !googleResponse.ok) {
+      return res.status(500).json({ 
+        error: 'Google Gemini Error: ' + lastError 
       });
     }
 
