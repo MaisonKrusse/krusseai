@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // Configurar cabeceras CORS por seguridad
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -13,9 +12,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Asegurar que req.body se lee correctamente tanto si es objeto como string
+    // Lector ultra-robusto para el cuerpo de la petición (soporta objeto o stream plano)
     let body = req.body;
-    if (typeof body === 'string') {
+    if (!body || Object.keys(body).length === 0) {
+      body = await new Promise((resolve) => {
+        let data = '';
+        req.on('data', chunk => { data += chunk; });
+        req.on('end', () => {
+          try { resolve(JSON.parse(data)); } catch (e) { resolve({}); }
+        });
+      });
+    } else if (typeof body === 'string') {
       try { body = JSON.parse(body); } catch (e) { body = {}; }
     }
 
@@ -23,10 +30,9 @@ export default async function handler(req, res) {
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
     if (!GEMINI_API_KEY) {
-      return res.status(500).json({ error: 'Falta configurar la variable GEMINI_API_KEY en las Environment Variables de Vercel.' });
+      return res.status(500).json({ error: 'Falta configurar la variable GEMINI_API_KEY en Vercel.' });
     }
 
-    // Usar gemini-1.5-flash como modelo base estable y seguro
     const selectedModel = model || 'gemini-1.5-flash';
 
     const googleResponse = await fetch(
@@ -44,8 +50,9 @@ export default async function handler(req, res) {
     const data = await googleResponse.json();
 
     if (!googleResponse.ok) {
-      const errorMsg = data.error?.message || 'Error devuelto por la API de Google Gemini';
-      return res.status(googleResponse.status).json({ error: errorMsg });
+      return res.status(googleResponse.status).json({ 
+        error: data.error?.message || 'Error devuelto por la API de Google Gemini' 
+      });
     }
 
     const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No se pudo generar una respuesta.';
