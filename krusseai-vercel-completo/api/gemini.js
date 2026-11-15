@@ -12,18 +12,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Lector ultra-robusto para el cuerpo de la petición (soporta objeto o stream plano)
     let body = req.body;
-    if (!body || Object.keys(body).length === 0) {
-      body = await new Promise((resolve) => {
-        let data = '';
-        req.on('data', chunk => { data += chunk; });
-        req.on('end', () => {
-          try { resolve(JSON.parse(data)); } catch (e) { resolve({}); }
-        });
-      });
-    } else if (typeof body === 'string') {
-      try { body = JSON.parse(body); } catch (e) { body = {}; }
+    if (!body || typeof body !== 'object') {
+      try {
+        if (typeof body === 'string') {
+          body = JSON.parse(body);
+        } else {
+          body = await new Promise((resolve) => {
+            let data = '';
+            req.on('data', chunk => { data += chunk; });
+            req.on('end', () => {
+              try { resolve(JSON.parse(data)); } catch (e) { resolve({}); }
+            });
+          });
+        }
+      } catch (e) {
+        body = {};
+      }
     }
 
     const { contents, systemInstruction, model } = body || {};
@@ -35,19 +40,31 @@ export default async function handler(req, res) {
 
     const selectedModel = model || 'gemini-1.5-flash';
 
+    // Corrección crítica: La API REST de Google Gemini exige 'system_instruction' (con barra baja)
+    const googlePayload = {
+      contents: contents || []
+    };
+
+    if (systemInstruction) {
+      googlePayload.system_instruction = systemInstruction;
+    }
+
     const googleResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: contents || [],
-          systemInstruction: systemInstruction || undefined
-        })
+        body: JSON.stringify(googlePayload)
       }
     );
 
-    const data = await googleResponse.json();
+    const textData = await googleResponse.text();
+    let data;
+    try {
+      data = JSON.parse(textData);
+    } catch (e) {
+      return res.status(500).json({ error: 'Respuesta inválida de Google (no es JSON): ' + textData.slice(0, 150) });
+    }
 
     if (!googleResponse.ok) {
       return res.status(googleResponse.status).json({ 
@@ -59,6 +76,6 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ reply: replyText });
   } catch (error) {
-    return res.status(500).json({ error: 'Excepción en el servidor proxy: ' + error.message });
+    return res.status(500).json({ error: 'Error en el servidor proxy: ' + error.message });
+    }
   }
-}
