@@ -259,8 +259,8 @@
 
     const AI_CONNECTION_CONFIG = {
       // Coloca aquí la URL de tu Proxy Backend seguro o inyéctala en window.KRUSSE_PROXY_CONFIG.proxyEndpoint:
-      proxyEndpoint: EXTERNAL_PROXY_CONFIG.proxyEndpoint || "", // Ej: "https://tu-worker.tu-dominio.workers.dev/api/gemini"
-      model: EXTERNAL_PROXY_CONFIG.model || "gemini-2.5-flash",
+     proxyEndpoint: EXTERNAL_PROXY_CONFIG.proxyEndpoint || "/api/gemini", // Conectado al servidor serverless de Vercel
+     model: EXTERNAL_PROXY_CONFIG.model || "gemini-3.8-flash",
       maxContextMessages: 18
     };
 
