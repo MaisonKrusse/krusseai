@@ -31,15 +31,14 @@ export default async function handler(req, res) {
       }
     }
 
-    const { contents, systemInstruction, model } = body || {};
+    const { contents, systemInstruction } = body || {};
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
     if (!GEMINI_API_KEY) {
       return res.status(500).json({ error: 'Falta configurar la variable GEMINI_API_KEY en Vercel.' });
     }
 
-    // Usamos el modelo actual compatible gemini-2.0-flash
-    const selectedModel = model || 'gemini-2.0-flash';
+    const selectedModel = 'gemini-2.0-flash';
 
     const googlePayload = {
       contents: contents || []
@@ -79,4 +78,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Error en el servidor proxy: ' + error.message });
   }
 }
-
