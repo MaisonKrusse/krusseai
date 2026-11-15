@@ -38,7 +38,8 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Falta configurar la variable GEMINI_API_KEY en Vercel.' });
     }
 
-    const selectedModel = 'gemini-2.0-flash';
+    // Actualizado al modelo exigido por Google: gemini-3.8-flash
+    const selectedModel = 'gemini-3.8-flash';
 
     const googlePayload = {
       contents: contents || []
