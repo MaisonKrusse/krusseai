@@ -12,15 +12,34 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = req.body || {};
-    const { contents, systemInstruction, model } = body;
+    let body = req.body;
+    if (!body || typeof body !== 'object') {
+      try {
+        if (typeof body === 'string') {
+          body = JSON.parse(body);
+        } else {
+          body = await new Promise((resolve) => {
+            let data = '';
+            req.on('data', chunk => { data += chunk; });
+            req.on('end', () => {
+              try { resolve(JSON.parse(data)); } catch (e) { resolve({}); }
+            });
+          });
+        }
+      } catch (e) {
+        body = {};
+      }
+    }
+
+    const { contents, systemInstruction, model } = body || {};
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
     if (!GEMINI_API_KEY) {
-      return res.status(500).json({ error: 'Falta configurar la variable GEMINI_API_KEY en las Environment Variables de Vercel.' });
+      return res.status(500).json({ error: 'Falta configurar la variable GEMINI_API_KEY en Vercel.' });
     }
 
-    const selectedModel = model || 'gemini-1.5-flash';
+    // Usamos el modelo actual compatible gemini-2.0-flash
+    const selectedModel = model || 'gemini-2.0-flash';
 
     const googlePayload = {
       contents: contents || []
@@ -60,3 +79,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Error en el servidor proxy: ' + error.message });
   }
 }
+
