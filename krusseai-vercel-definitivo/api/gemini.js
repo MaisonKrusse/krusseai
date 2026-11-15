@@ -38,11 +38,13 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Falta configurar la variable GEMINI_API_KEY en Vercel.' });
     }
 
-    // Llamada directa y rápida sin bucles para evitar bloqueos en Vercel
     const selectedModel = 'gemini-3.8-flash';
 
+    // Limitamos el historial a los últimos 6 mensajes para evitar bloqueos y timeouts
+    const safeContents = Array.isArray(contents) ? contents.slice(-6) : [];
+
     const googlePayload = {
-      contents: contents || []
+      contents: safeContents
     };
 
     if (systemInstruction) {
@@ -79,4 +81,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Error en el servidor proxy: ' + error.message });
   }
 }
-
