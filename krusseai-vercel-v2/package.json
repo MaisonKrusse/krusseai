@@ -1,0 +1,6 @@
+{
+  "name": "krusseai-vercel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "KrusseAI serverless API endpoint on Vercel"
+}

@@ -1,0 +1,2625 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0c0d14" />
+  <meta name="description" content="KrusseAI: un asistente para entrenar, estudiar, escuchar música y jugar." />
+  <title>KrusseAI — Entreno, Estudio, Música y Videojuegos</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='9' cy='9' r='6.5' fill='%234be3a1'/%3E%3Ccircle cx='23' cy='9' r='6.5' fill='%236e9bff'/%3E%3Ccircle cx='9' cy='23' r='6.5' fill='%23c18bff'/%3E%3Ccircle cx='23' cy='23' r='6.5' fill='%23ff7a59'/%3E%3C/svg%3E" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Instrument+Sans:wght@400..700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/tokyo-night-dark.min.css" media="print" onload="this.media='all'" />
+
+  <script defer src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js" onload="window.lucide && window.lucide.createIcons()"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <style>
+    /* ===== Tokens ===== */
+    :root {
+      --ink: #0c0d14; --ink-2: #11121b; --surface: #161824; --surface-2: #1e2030; --surface-3: #292c40;
+      --line: rgba(255,255,255,.08); --line-2: rgba(255,255,255,.16);
+      --text: #f3f0e8; --muted: #a0a3b8; --faint: #62657d;
+      --gold: #ffc857; --danger: #ff7b7b;
+      --c-entreno: #4be3a1; --c-estudio: #6e9bff; --c-musica: #c18bff; --c-juegos: #ff7a59; --c-privado: #cfd2e0;
+      --a: var(--c-entreno); --on-a: #0a0b12;
+      --fd: 'Bricolage Grotesque', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+      --fb: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      --ease: cubic-bezier(.2,.8,.2,1);
+      --safe-b: env(safe-area-inset-bottom, 0px); --safe-t: env(safe-area-inset-top, 0px);
+      color-scheme: dark;
+    }
+    [data-mode="entreno"] { --a: var(--c-entreno); }
+    [data-mode="estudio"] { --a: var(--c-estudio); }
+    [data-mode="musica"] { --a: var(--c-musica); }
+    [data-mode="videojuegos"] { --a: var(--c-juegos); }
+    [data-mode="privado"] { --a: var(--c-privado); }
+
+    /* ===== Base ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
+    html, body { height: 100%; }
+    body { background: var(--ink); color: var(--text); font: 400 15px/1.5 var(--fb); overflow: hidden; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; -webkit-tap-highlight-color: transparent; }
+    button, input, textarea { font: inherit; color: inherit; }
+    button { background: none; border: 0; padding: 0; cursor: pointer; }
+    button:disabled { cursor: not-allowed; }
+    [hidden] { display: none !important; }
+    :focus-visible { outline: 2px solid var(--a); outline-offset: 2px; border-radius: 6px; }
+    .ic { width: 1.25rem; height: 1.25rem; flex: none; stroke-width: 1.9; }
+    .ic-s { width: 1rem; height: 1rem; flex: none; stroke-width: 2; }
+    .spin { animation: spin .9s linear infinite; }
+    .fine { color: var(--muted); font-size: 14px; line-height: 1.45; }
+    .link { color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+    .link:hover { color: var(--text); }
+
+    /* ===== Botones y campos ===== */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 54px; padding: 0 26px; border-radius: 999px; font: 600 16px/1 var(--fb); white-space: nowrap; transition: transform .15s, background .2s, border-color .2s, opacity .2s; }
+    .btn:active:not(:disabled) { transform: scale(.98); }
+    .btn:disabled { opacity: .55; }
+    .btn-primary { background: var(--text); color: var(--ink); }
+    .btn-primary:hover:not(:disabled) { background: #fff; }
+    .btn-ghost { border: 1.5px solid var(--line-2); color: var(--text); }
+    .btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,.06); }
+    .btn-accent { background: var(--a); color: var(--on-a); }
+    .btn-accent:hover:not(:disabled) { filter: brightness(1.08); }
+    .btn-gold { background: var(--gold); color: #1d1500; }
+    .btn-danger { background: rgba(255,123,123,.12); color: var(--danger); border: 1.5px solid rgba(255,123,123,.35); }
+    .btn-sm { height: 42px; padding: 0 18px; font-size: 14px; }
+    .btn-block { width: 100%; }
+    .icon-btn { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); flex: none; transition: background .2s, color .2s; }
+    .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+    .field { display: grid; gap: 6px; }
+    .field > label { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .input { width: 100%; height: 50px; padding: 0 16px; border-radius: 14px; background: var(--ink-2); border: 1.5px solid var(--line-2); font-size: 16px; outline: 0; transition: border-color .2s; }
+    .input:focus { border-color: var(--a); }
+    .input::placeholder, textarea::placeholder { color: var(--faint); }
+    .input.area { height: auto; padding: 13px 16px; line-height: 1.55; resize: none; }
+    .msg-line { font-size: 13px; min-height: 18px; }
+    .msg-line.err { color: var(--danger); } .msg-line.ok { color: var(--c-entreno); }
+    .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; background: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; }
+    .seg button { height: 38px; border-radius: 10px; font-weight: 600; font-size: 14px; color: var(--muted); transition: background .2s, color .2s; }
+    .seg button.on { background: var(--surface-3); color: var(--text); }
+    .pill { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-2); font-weight: 600; font-size: 14px; transition: background .2s; }
+    .pill:hover { background: var(--surface-2); }
+    .pill .ic { color: var(--gold); width: 1.05rem; height: 1.05rem; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--a); color: var(--on-a); font: 800 16px var(--fd); display: grid; place-items: center; flex: none; }
+    .brand { display: flex; align-items: center; gap: 10px; font: 800 21px/1 var(--fd); letter-spacing: -.02em; }
+    .mark { flex: none; }
+
+    /* ===== Bienvenida ===== */
+    .landing { position: fixed; inset: 0; height: var(--vh, 100dvh); overflow-y: auto; overflow-x: hidden; background: var(--ink); }
+    .landing::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: .06; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+    .l-wrap { position: relative; min-height: 100%; display: grid; grid-template-rows: auto 1fr; max-width: 1280px; margin: 0 auto; padding: calc(18px + var(--safe-t)) clamp(20px, 5vw, 56px) calc(28px + var(--safe-b)); }
+    .l-top { display: flex; align-items: center; justify-content: space-between; height: 48px; }
+    .l-main { display: grid; gap: 44px; align-content: center; padding: clamp(20px, 5vh, 56px) 0; }
+    .verbs { display: grid; justify-items: start; font-family: var(--fd); font-weight: 800; font-size: clamp(52px, 19vw, 96px); line-height: .9; letter-spacing: -.045em; }
+    .verb { font: inherit; font-stretch: 80%; letter-spacing: inherit; line-height: inherit; color: rgba(243,240,232,.13); text-align: left; padding: 0; cursor: pointer; transition: color .4s, font-stretch .5s var(--ease), translate .5s var(--ease); }
+    .verb:hover { color: color-mix(in srgb, var(--v) 55%, transparent); }
+    .verb.on { color: var(--v); font-stretch: 100%; translate: .05em 0; }
+    .lede { margin-top: 26px; font: 500 clamp(18px, 2.4vw, 22px)/1.35 var(--fb); color: var(--text); max-width: 26ch; }
+    .cta { display: grid; gap: 12px; margin-top: 28px; max-width: 400px; }
+    .cta .fine { margin-top: 6px; }
+    .cta .btn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+    button.brand { color: inherit; text-align: left; }
+    .stage { position: relative; justify-self: center; width: min(100%, 390px); padding: 0 14px 18px 0; }
+    .stage::before { content: ""; position: absolute; inset: 7% -2% 0 12%; background: var(--a); border-radius: 44px; rotate: 3deg; transition: background .5s; }
+    .phone { position: relative; background: var(--surface); border: 1px solid var(--line-2); border-radius: 34px; padding: 16px; min-height: 330px; box-shadow: 0 30px 60px -24px rgba(0,0,0,.7); }
+    .demo { display: none; gap: 12px; align-content: start; }
+    .demo.on { display: grid; animation: paneIn .45s var(--ease); }
+    .demo-head { display: flex; align-items: center; gap: 10px; padding: 2px 2px 8px; font: 700 17px var(--fd); }
+    .demo-ic { width: 36px; height: 36px; border-radius: 12px; background: var(--a); color: var(--on-a); display: grid; place-items: center; }
+    .bub { max-width: 90%; padding: 11px 15px; border-radius: 20px; font-size: 14.5px; line-height: 1.45; }
+    .bub.me { justify-self: end; background: var(--a); color: var(--on-a); font-weight: 600; border-bottom-right-radius: 6px; }
+    .bub.ai { justify-self: start; background: var(--surface-2); border-bottom-left-radius: 6px; }
+    .mini { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+    .mini li { display: flex; justify-content: space-between; gap: 14px; border-top: 1px solid var(--line); padding-top: 6px; }
+    .mini b { color: var(--a); font-weight: 700; }
+    .l-wrap.in .verb { animation: vIn .8s var(--ease) both; animation-delay: calc(var(--i) * 80ms); }
+    .l-wrap.in .l-copy > :not(.verbs) { animation: fadeUp .7s .4s var(--ease) both; }
+    .l-wrap.in .stage { animation: stageIn 1s .25s var(--ease) both; }
+    @media (min-width: 960px) {
+      .l-main { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 72px; }
+      .verbs { font-size: clamp(64px, min(8.8vw, 13vh), 126px); }
+      .cta { grid-template-columns: 1fr 1fr; max-width: 520px; }
+      .cta .fine { grid-column: 1 / -1; }
+      .lede { max-width: none; margin-top: 22px; }
+      .cta { margin-top: 24px; }
+      .stage { width: min(100%, 410px); justify-self: end; }
+      .phone { min-height: 360px; }
+    }
+    @media (max-width: 559px) { .mchip { display: none; } }
+    /* Las rejillas no deben ensancharse con contenidos largos (código, tablas, títulos) */
+    .thread, .side-list, .sheet, .quiz, .q, .tickets, .kv, .stack, .sheet form, .card form, .note, .plans { grid-template-columns: minmax(0, 1fr); }
+    @media (min-width: 900px) { .plans { grid-template-columns: repeat(3, 1fr); } }
+
+    /* ===== Aplicación ===== */
+    .app { position: fixed; inset: 0; height: var(--vh, 100dvh); display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; background: var(--ink); }
+    .work { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+    .top { display: flex; align-items: center; gap: 8px; height: calc(60px + var(--safe-t)); padding: var(--safe-t) 12px 0; border-bottom: 1px solid var(--line); flex: none; }
+    .top-title { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+    .mchip { width: 38px; height: 38px; border-radius: 13px; background: var(--a); color: var(--on-a); display: grid; place-items: center; flex: none; transition: background .4s; }
+    .tt { min-width: 0; display: grid; line-height: 1.2; }
+    .tt b { font: 700 16px var(--fd); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tt small { color: var(--muted); font-size: 12.5px; }
+    .top-r { display: flex; align-items: center; gap: 8px; flex: none; }
+    .main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+    .side { position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; width: min(88vw, 340px); display: flex; flex-direction: column; background: var(--ink-2); border-right: 1px solid var(--line); padding: calc(16px + var(--safe-t)) 14px calc(14px + var(--safe-b)); gap: 14px; transform: translateX(-104%); transition: transform .32s var(--ease); }
+    .app.drawer .side { transform: none; }
+    .scrim { position: fixed; inset: 0; z-index: 30; background: rgba(4,5,9,.62); opacity: 0; pointer-events: none; transition: opacity .3s; }
+    .app.drawer .scrim { opacity: 1; pointer-events: auto; }
+    .side-head { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+    .side-modes { display: grid; gap: 4px; }
+    .mode-row { display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 10px; border-radius: 14px; color: var(--muted); font-weight: 600; width: 100%; text-align: left; transition: background .2s, color .2s; }
+    .mode-row:hover { background: var(--surface); color: var(--text); }
+    .mode-row.on { background: var(--surface-2); color: var(--text); }
+    .mode-dot { width: 32px; height: 32px; border-radius: 11px; display: grid; place-items: center; color: var(--mc); background: color-mix(in srgb, var(--mc) 16%, transparent); flex: none; }
+    .mode-row.on .mode-dot { background: var(--mc); color: var(--on-a); }
+    .side-list { flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 2px; align-content: start; overscroll-behavior: contain; }
+    .side-empty { color: var(--faint); font-size: 13.5px; text-align: center; padding: 28px 8px; }
+    .item { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 0 6px 0 12px; border-radius: 12px; color: var(--muted); cursor: pointer; font-size: 14.5px; font-weight: 500; transition: background .2s, color .2s; }
+    .item:hover { background: var(--surface); color: var(--text); }
+    .item.on { background: var(--surface-2); color: var(--text); }
+    .item-main { flex: 1; min-width: 0; align-self: stretch; display: flex; align-items: center; text-align: left; color: inherit; font: inherit; overflow: hidden; }
+    .item-main span { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .del { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: var(--faint); flex: none; }
+    .del:hover { color: var(--danger); background: rgba(255,123,123,.1); }
+    .side-foot { border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 10px; font-size: 13.5px; }
+    .meter { height: 6px; border-radius: 99px; background: var(--surface-3); overflow: hidden; }
+    .meter i { display: block; height: 100%; width: var(--p, 0%); background: var(--a); border-radius: 99px; transition: width .6s var(--ease); }
+    .foot-row { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); }
+    .foot-row b { color: var(--text); font-weight: 600; }
+
+    .tabs { display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px 6px calc(6px + var(--safe-b)); background: var(--ink-2); border-top: 1px solid var(--line); }
+    .tab { display: grid; justify-items: center; gap: 3px; padding: 4px 0; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+    .tab-ic { width: 54px; height: 30px; border-radius: 999px; display: grid; place-items: center; transition: background .25s, color .25s; }
+    .tab.on { color: var(--text); }
+    .tab.on .tab-ic { background: var(--tc); color: var(--on-a); }
+    .app.kb .tabs { display: none; }
+
+    @media (max-width: 639px) { .mchip { display: none; } .top { gap: 4px; } }
+    @media (min-width: 1024px) {
+      .app { grid-template-columns: 304px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+      .side { position: static; transform: none; width: auto; padding-top: 20px; transition: none; }
+      .side-modes { display: grid; }
+      .scrim, .tabs, .lg-hide { display: none !important; }
+      .top { padding: 0 24px; height: 68px; }
+    }
+
+    /* ===== Chat ===== */
+    .chat { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+    .thread { max-width: 780px; margin: 0 auto; padding: 22px 16px 14px; display: grid; gap: 22px; }
+    .msg { display: flex; gap: 12px; min-width: 0; }
+    .msg.me { justify-content: flex-end; }
+    .msg.me .body { background: var(--a); color: var(--on-a); font-weight: 500; padding: 11px 16px; border-radius: 22px 22px 6px 22px; max-width: 86%; }
+    .av { width: 30px; height: 30px; border-radius: 10px; background: color-mix(in srgb, var(--a) 22%, transparent); color: var(--a); display: grid; place-items: center; flex: none; margin-top: 2px; }
+    .msg.ai .body { flex: 1; min-width: 0; padding-top: 3px; line-height: 1.65; }
+    .photo-note { display: flex; align-items: center; gap: 6px; font-size: 12px; opacity: .75; margin-bottom: 4px; }
+    .typing { display: flex; gap: 5px; padding: 10px 0; }
+    .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: blink 1s infinite ease-in-out; }
+    .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+    .empty { display: grid; justify-items: center; text-align: center; gap: 14px; padding: clamp(24px, 9vh, 80px) 8px 8px; }
+    .empty-ic { width: 68px; height: 68px; border-radius: 24px; background: var(--a); color: var(--on-a); display: grid; place-items: center; rotate: -4deg; }
+    .empty-ic .ic { width: 32px; height: 32px; }
+    .empty h2 { font: 800 clamp(28px, 6vw, 42px)/1.05 var(--fd); letter-spacing: -.03em; }
+    .empty p { color: var(--muted); max-width: 36ch; }
+    .sugg { display: grid; gap: 8px; width: min(100%, 520px); margin-top: 10px; }
+    .sugg button { text-align: left; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line-2); font-weight: 500; transition: border-color .2s, background .2s; }
+    .sugg button:hover { border-color: var(--a); background: var(--surface); }
+    .dock { max-width: 780px; width: 100%; margin: 0 auto; padding: 4px 12px calc(12px + var(--safe-b)); flex: none; }
+    .tools { display: flex; gap: 8px; overflow-x: auto; padding: 0 2px 10px; scrollbar-width: none; }
+    .tools::-webkit-scrollbar { display: none; }
+    .tools:empty { display: none; }
+    @media (min-width: 640px) { .tools { flex-wrap: wrap; overflow: visible; } }
+    .chip { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-2); font-size: 13.5px; font-weight: 600; transition: border-color .2s, background .2s; }
+    .chip:hover:not(:disabled) { border-color: var(--a); background: var(--surface); }
+    .chip small { color: var(--muted); font-size: 12px; font-weight: 500; }
+    .attach { display: flex; align-items: center; gap: 12px; padding: 8px; margin-bottom: 8px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; color: var(--c-entreno); }
+    .attach img { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; }
+    .attach .link { margin-left: auto; padding-right: 6px; }
+    .composer { display: flex; align-items: flex-end; gap: 6px; padding: 6px; border-radius: 28px; background: var(--surface); border: 1.5px solid var(--line-2); transition: border-color .2s; }
+    .composer:focus-within { border-color: var(--a); }
+    .composer textarea { flex: 1; min-width: 0; resize: none; border: 0; outline: 0; background: none; padding: 10px 4px; font-size: 16px; line-height: 22px; max-height: 140px; }
+    .composer > textarea:first-child { padding-left: 14px; }
+    .send { width: 44px; height: 44px; border-radius: 50%; background: var(--a); color: var(--on-a); display: grid; place-items: center; flex: none; transition: transform .15s, opacity .2s; }
+    .send:active:not(:disabled) { transform: scale(.92); }
+    .send:disabled { opacity: .35; }
+
+    .md > * + * { margin-top: .7em; }
+    .md h1, .md h2, .md h3, .md h4 { font-family: var(--fd); font-weight: 700; line-height: 1.25; letter-spacing: -.01em; }
+    .md h1 { font-size: 1.3em; } .md h2 { font-size: 1.18em; } .md h3 { font-size: 1.08em; }
+    .md ul { list-style: disc; padding-left: 1.3em; } .md ol { list-style: decimal; padding-left: 1.4em; }
+    .md li + li { margin-top: .3em; } .md li::marker { color: var(--a); }
+    .md a { color: var(--a); text-decoration: underline; text-underline-offset: 3px; }
+    .md strong { font-weight: 700; color: #fff; }
+    .md code { background: var(--surface-2); padding: .12em .4em; border-radius: 6px; font-size: .88em; }
+    .md pre { background: #101220; border: 1px solid var(--line); border-radius: 16px; padding: 14px; overflow-x: auto; }
+    .md pre code { background: none; padding: 0; }
+    .md table { display: block; overflow-x: auto; border-collapse: collapse; font-size: .9em; max-width: 100%; }
+    .md th, .md td { border: 1px solid var(--line-2); padding: 7px 11px; text-align: left; white-space: nowrap; }
+    .md th { background: var(--surface-2); }
+    .md blockquote { border-left: 3px solid var(--a); padding-left: 12px; color: var(--muted); }
+    .md hr { border: 0; border-top: 1px solid var(--line-2); }
+
+    .quiz { display: grid; gap: 12px; margin-top: 14px; }
+    .q { display: grid; gap: 10px; padding: 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
+    .q > p { font-weight: 600; font-size: 14.5px; }
+    .opt { text-align: left; padding: 11px 14px; border-radius: 12px; background: var(--surface-2); border: 1.5px solid transparent; font-size: 14px; transition: border-color .2s, background .2s; }
+    .opt:hover:not(:disabled) { border-color: var(--line-2); }
+    .opt.sel { border-color: var(--a); }
+    .opt.ok { border-color: var(--c-entreno); background: color-mix(in srgb, var(--c-entreno) 16%, var(--surface-2)); }
+    .opt.bad { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, var(--surface-2)); }
+    .opt.dim { opacity: .55; }
+    .q small { color: var(--muted); font-size: 12.5px; }
+    .result { padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--c-entreno) 14%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c-entreno) 40%, transparent); font-weight: 600; font-size: 14px; }
+
+    /* ===== Modo privado ===== */
+    .center { flex: 1; display: grid; place-items: center; padding: 24px; }
+    .card { width: min(100%, 390px); display: grid; justify-items: center; gap: 16px; padding: 32px 24px; text-align: center; background: var(--surface); border: 1px solid var(--line); border-radius: 28px; }
+    .card h2 { font: 800 24px/1.1 var(--fd); letter-spacing: -.02em; }
+    .card form { display: grid; gap: 12px; width: 100%; }
+    .note { width: 100%; max-width: 780px; margin: 0 auto; padding: 20px 16px; display: grid; gap: 12px; }
+    .note .title { font: 700 22px var(--fd); height: 56px; }
+    .note .area { min-height: 46dvh; }
+    .row-end { display: flex; justify-content: flex-end; gap: 10px; }
+    .side-tabs { display: grid; gap: 10px; }
+
+    /* ===== Hojas y avisos ===== */
+    .modal { position: fixed; inset: 0; z-index: 60; display: grid; align-items: end; background: rgba(4,5,9,.72); animation: fade .2s; }
+    .sheet { width: 100%; max-height: 92dvh; overflow-y: auto; background: var(--surface); border: 1px solid var(--line-2); border-radius: 28px 28px 0 0; padding: 22px 20px calc(24px + var(--safe-b)); display: grid; gap: 18px; animation: sheetUp .38s var(--ease); overscroll-behavior: contain; }
+    .sheet-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .sheet h3 { font: 800 24px/1.1 var(--fd); letter-spacing: -.02em; }
+    .sheet h4 { font: 700 15px var(--fd); }
+    .sheet-head .fine { margin-top: 4px; font-size: 13.5px; }
+    .sheet form { display: grid; gap: 12px; }
+    .sheet .stack { display: grid; gap: 10px; }
+    .kv { display: grid; gap: 8px; padding: 14px 16px; border-radius: 16px; background: var(--ink-2); border: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+    .kv b { color: var(--text); font-weight: 600; }
+    .kv .plan-name { color: var(--a); font-weight: 700; }
+    .plans { display: grid; gap: 14px; }
+    .plan .feat { flex: 1; }
+    .plan { display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: 24px; border: 1.5px solid var(--line-2); background: var(--ink-2); }
+    .plan.pop { border-color: var(--c-estudio); }
+    .plan.pro { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 6%, var(--ink-2)); }
+    .plan .badge { justify-self: start; padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 700; background: color-mix(in srgb, var(--c-estudio) 22%, transparent); color: var(--c-estudio); }
+    .plan h4 { font: 800 21px var(--fd); }
+    .price { font: 800 36px/1 var(--fd); letter-spacing: -.03em; } .price small { font: 500 14px var(--fb); color: var(--muted); letter-spacing: 0; }
+    .feat { list-style: none; padding: 0; display: grid; gap: 10px; font-size: 14px; }
+    .feat li { display: flex; gap: 10px; align-items: flex-start; }
+    .feat .ic { width: 1.05rem; height: 1.05rem; margin-top: 3px; }
+    .tickets { display: grid; gap: 8px; max-height: 220px; overflow-y: auto; font-size: 13.5px; color: var(--muted); }
+    .ticket { padding: 12px 14px; border-radius: 14px; background: var(--ink-2); border: 1px solid var(--line); }
+    .ticket b { color: var(--text); }
+    .ticket .st { float: right; font-size: 11.5px; padding: 2px 9px; border-radius: 99px; background: var(--surface-3); }
+    @media (min-width: 640px) {
+      .modal { align-items: center; justify-items: center; padding: 24px; }
+      .sheet { max-width: 440px; border-radius: 28px; padding: 28px; }
+      .sheet.wide { max-width: 1020px; }
+      .sheet.mid { max-width: 520px; }
+    }
+    @media (min-width: 900px) { .plans { grid-template-columns: repeat(3, 1fr); } }
+
+    #toasts { position: fixed; left: 0; right: 0; bottom: calc(86px + var(--safe-b)); z-index: 120; display: grid; justify-items: center; gap: 8px; pointer-events: none; padding: 0 16px; }
+    .toast { pointer-events: auto; display: flex; align-items: center; gap: 10px; max-width: min(100%, 440px); padding: 12px 16px; border-radius: 16px; background: var(--text); color: var(--ink); font-size: 14px; font-weight: 600; box-shadow: 0 16px 40px -10px rgba(0,0,0,.6); animation: toastIn .35s var(--ease); }
+    .toast.err { background: #ffb0a8; color: #2a0b08; }
+    @media (min-width: 1024px) { #toasts { bottom: auto; top: 20px; } }
+
+    /* ===== Transiciones de entrada ===== */
+    #fx { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
+    #fx.on { pointer-events: auto; }
+    .wipe { position: absolute; inset: 0; clip-path: circle(0 at var(--x) var(--y)); animation: wipe .65s cubic-bezier(.65,0,.35,1) forwards; }
+    .welcome { position: absolute; inset: 0; background: var(--ink); display: grid; place-content: center; justify-items: center; gap: 22px; text-align: center; padding: 24px; animation: fade .3s both; }
+    .welcome.iris { animation: iris .75s cubic-bezier(.65,0,.35,1) forwards; }
+    .ring { width: 96px; height: 96px; fill: none; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
+    .ring circle { stroke: var(--c-entreno); stroke-dasharray: 214; stroke-dashoffset: 214; animation: draw .8s .15s ease forwards; }
+    .ring path { stroke: var(--text); stroke-dasharray: 48; stroke-dashoffset: 48; animation: draw .45s .8s ease forwards; }
+    .welcome h2 { font: 800 clamp(34px, 8vw, 64px)/1 var(--fd); letter-spacing: -.035em; animation: fadeUp .6s .55s var(--ease) both; }
+    @media (min-width: 1024px) { .app.enter .side { animation: fromLeft .7s var(--ease) both; } }
+    .app.enter .work { animation: fadeUp .7s .12s var(--ease) both; }
+    .app.enter .tabs { animation: fadeUp .6s .25s var(--ease) both; }
+
+    @keyframes spin { to { rotate: 360deg; } }
+    @keyframes fade { from { opacity: 0; } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } }
+    @keyframes fromLeft { from { opacity: 0; transform: translateX(-24px); } }
+    @keyframes vIn { from { opacity: 0; transform: translateY(.28em); } }
+    @keyframes stageIn { from { opacity: 0; transform: translateY(28px) rotate(1.5deg); } }
+    @keyframes paneIn { from { opacity: 0; transform: translateY(10px); } }
+    @keyframes sheetUp { from { transform: translateY(40px); opacity: 0; } }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(12px) scale(.96); } }
+    @keyframes blink { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+    @keyframes wipe { to { clip-path: circle(150vmax at var(--x) var(--y)); } }
+    @keyframes iris { from { clip-path: circle(150vmax at 50% 50%); } to { clip-path: circle(0 at 50% 50%); } }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Bienvenida: HTML estático para que pinte antes de cargar Firebase -->
+  <div id="landing" class="landing" data-mode="entreno">
+    <div class="l-wrap in">
+      <header class="l-top">
+        <div class="brand">
+          <svg class="mark" viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><circle cx="9" cy="9" r="6.5" fill="var(--c-entreno)"/><circle cx="23" cy="9" r="6.5" fill="var(--c-estudio)"/><circle cx="9" cy="23" r="6.5" fill="var(--c-musica)"/><circle cx="23" cy="23" r="6.5" fill="var(--c-juegos)"/></svg>
+          <span>KrusseAI</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" data-act="openPricing">Planes</button>
+      </header>
+
+      <main class="l-main">
+        <section class="l-copy">
+          <h1 class="verbs">
+            <button class="verb on" style="--v: var(--c-entreno); --i: 0" data-act="pickVerb" data-a="entreno" aria-pressed="true">Entrena.</button>
+            <button class="verb" style="--v: var(--c-estudio); --i: 1" data-act="pickVerb" data-a="estudio" aria-pressed="false">Estudia.</button>
+            <button class="verb" style="--v: var(--c-musica); --i: 2" data-act="pickVerb" data-a="musica" aria-pressed="false">Escucha.</button>
+            <button class="verb" style="--v: var(--c-juegos); --i: 3" data-act="pickVerb" data-a="videojuegos" aria-pressed="false">Juega.</button>
+          </h1>
+          <p class="lede">Un asistente para cada cosa que te apasiona.</p>
+          <div class="cta">
+            <button id="l-main-btn" class="btn btn-primary" data-act="enterGuest">Entrar como invitado</button>
+            <button id="l-alt-btn" class="btn btn-ghost" data-act="openAuth">Iniciar sesión</button>
+            <p id="l-fine" class="fine">Como invitado tienes 150 tokens. Con una cuenta gratis guardas tus chats y recibes 500 tokens cada 6 horas.</p>
+          </div>
+        </section>
+
+        <section class="stage" aria-hidden="true">
+          <div class="phone">
+            <div class="demo on" data-m="entreno">
+              <div class="demo-head"><span class="demo-ic"><i data-lucide="dumbbell" class="ic"></i></span>Entreno</div>
+              <div class="bub me">Rutina de pecho para 40 minutos</div>
+              <div class="bub ai"><strong>Pecho, 40 minutos</strong>
+                <ul class="mini"><li><span>Press banca</span><b>4×8</b></li><li><span>Aperturas con mancuernas</span><b>3×12</b></li><li><span>Fondos</span><b>3×10</b></li></ul>
+              </div>
+            </div>
+            <div class="demo" data-m="estudio">
+              <div class="demo-head"><span class="demo-ic"><i data-lucide="graduation-cap" class="ic"></i></span>Estudio</div>
+              <div class="bub me">Explícame qué es una derivada</div>
+              <div class="bub ai">Es la velocidad a la que cambia algo. Si recorres 100 km en 2 horas, tu media es 50 km/h; la derivada es lo que marca el velocímetro en cada instante.</div>
+            </div>
+            <div class="demo" data-m="musica">
+              <div class="demo-head"><span class="demo-ic"><i data-lucide="music" class="ic"></i></span>Música</div>
+              <div class="bub me">Acordes para una balada triste</div>
+              <div class="bub ai">Prueba <strong>Am – F – C – G</strong> en La menor, a unos 70 bpm. Deja que el bajo marque la raíz y toca los acordes arpegiados.</div>
+            </div>
+            <div class="demo" data-m="videojuegos">
+              <div class="demo-head"><span class="demo-ic"><i data-lucide="gamepad-2" class="ic"></i></span>Videojuegos</div>
+              <div class="bub me">¿Cómo mejoro mi puntería?</div>
+              <div class="bub ai">Baja la sensibilidad, calienta 10 minutos con bots y mantén la mira a la altura de la cabeza antes de que aparezca el enemigo.</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div id="app" class="app" hidden></div>
+  <div id="fx"></div>
+  <div id="toasts" aria-live="polite"></div>
+
+  <script type="module">
+    // =========================================================================
+    // FIREBASE (SDK modular)
+    // =========================================================================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+    import {
+      getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+      signOut, sendPasswordResetEmail, reauthenticateWithCredential, EmailAuthProvider
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import {
+      getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection,
+      query, where, getDocs, onSnapshot, serverTimestamp, increment
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBG2fMLnEPCpqPTGwqV4urt6M2YjnPjQXk",
+      authDomain: "krusseai.firebaseapp.com",
+      projectId: "krusseai",
+      storageBucket: "krusseai.firebasestorage.app",
+      messagingSenderId: "1073002399180",
+      appId: "1:1073002399180:web:9bd91895c6e0f35c01c969",
+      measurementId: "G-JB6H481YBK"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    // Analytics solo se activa si el navegador lo permite (no funciona en file:// ni con bloqueadores)
+    analyticsSupported().then((ok) => { if (ok) getAnalytics(app); }).catch(() => {});
+
+    // =========================================================================
+    // CONFIGURACIÓN
+    // =========================================================================
+    const APP_CONFIG = {
+      // Pon useBackend en true cuando tengas un endpoint de IA que responda { text } a este POST.
+      useBackend: false,
+      proxyEndpoint: "/api/gemini",
+      modelFlash: "gemini-3.8-flash",
+      modelPro: "gemini-3.8-pro"
+    };
+
+    // IDs de precio de Stripe (Stripe Dashboard → Producto → Precio → "price_...").
+    // Cada producto debe tener el metadato firebaseRole = "premium" o "pro".
+    const STRIPE_PRICE_IDS = {
+      premium: "price_REEMPLAZA_PREMIUM",
+      pro: "price_REEMPLAZA_PRO"
+    };
+    // Región donde instalaste la extensión "Run Payments with Stripe"
+    const STRIPE_FUNCTIONS_REGION = "us-central1";
+
+    const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+    const GUEST_TOKENS = 150;
+    const PBKDF2_ITERATIONS = 150000;
+    const MIN_PASS = 6;
+    const LOCK_DOC_ID = "_lock";
+    const PLAN_RANK = { free: 0, premium: 1, pro: 2 };
+
+    const PLANS_CONFIG = {
+      free: {
+        id: "free", name: "Plan Gratis", tokens: 500, price: "0,00 $",
+        photos: false, studyTools: false, support: false, priority: false, model: APP_CONFIG.modelFlash
+      },
+      premium: {
+        id: "premium", name: "Plan Premium", tokens: 2500, price: "4,99 $",
+        photos: true, studyTools: true, support: false, priority: false, model: APP_CONFIG.modelFlash
+      },
+      pro: {
+        id: "pro", name: "Plan Pro", tokens: 10000, price: "7,99 $",
+        photos: true, studyTools: true, support: true, priority: true, model: APP_CONFIG.modelPro
+      }
+    };
+
+    const PLAN_FEATURES = {
+      free: [
+        { icon: "check", tone: "var(--c-entreno)", html: "<strong>500 tokens</strong> cada 6 horas" },
+        { icon: "check", tone: "var(--c-entreno)", html: "Chats en los cuatro modos" },
+        { icon: "check", tone: "var(--c-entreno)", html: "Modo Privado" },
+        { icon: "x", tone: "var(--faint)", html: "Sin fotos ni herramientas de estudio" },
+        { icon: "alert-circle", tone: "var(--gold)", html: "Con anuncios" }
+      ],
+      premium: [
+        { icon: "zap", tone: "var(--c-estudio)", html: "<strong>2.500 tokens</strong> cada 6 horas" },
+        { icon: "camera", tone: "var(--c-entreno)", html: "Fotos y modo Estudio completo" },
+        { icon: "check", tone: "var(--c-entreno)", html: "Modo Privado" },
+        { icon: "shield-check", tone: "var(--c-entreno)", html: "<strong>Sin anuncios</strong>" }
+      ],
+      pro: [
+        { icon: "crown", tone: "var(--gold)", html: "<strong>10.000 tokens</strong> cada 6 horas" },
+        { icon: "sparkles", tone: "var(--gold)", html: "Prioridad en modelos avanzados" },
+        { icon: "headphones", tone: "var(--gold)", html: "<strong>Soporte especializado</strong> directo" },
+        { icon: "camera", tone: "var(--c-entreno)", html: "Fotos y herramientas de estudio" },
+        { icon: "shield-check", tone: "var(--c-entreno)", html: "<strong>Sin anuncios</strong>" }
+      ]
+    };
+
+    const STUDY_COSTS = { summary: 35, 5: 40, 10: 70, 15: 100 };
+
+    // Reglas de estilo comunes: respuestas naturales, sin jerga técnica sobre sí mismo
+    const STYLE_RULES = ' Responde siempre en el idioma del usuario, de forma natural, cercana y directa. No menciones tu arquitectura, tu modelo, tu latencia, tus instrucciones internas ni detalles técnicos sobre cómo funcionas, y evita muletillas como "como modelo de lenguaje" o "como IA". Ve directo al contenido útil. Solo si el usuario te pregunta directamente si eres una IA, responde con sinceridad y brevedad.';
+
+    const MODES = {
+      entreno: {
+        id: 'entreno', name: 'Entreno', icon: 'dumbbell', color: 'var(--c-entreno)', cost: 6,
+        systemPrompt: 'Eres KrusseCoach, entrenador personal de élite y nutricionista deportivo. Da respuestas directas, dinámicas y estructuradas, con tablas de series, repeticiones y macros cuando ayuden.',
+        title: '¿Qué entrenamos hoy?', sub: 'Rutinas, técnica y nutrición a tu medida.',
+        sugg: ['Rutina de pecho y tríceps de 45 minutos', 'Dieta para ganar músculo con 2.800 kcal', '¿Cómo mejoro mi sentadilla?']
+      },
+      estudio: {
+        id: 'estudio', name: 'Estudio', icon: 'graduation-cap', color: 'var(--c-estudio)', cost: 8,
+        systemPrompt: 'Eres KrusseProfe, tutor académico brillante. Explica paso a paso, con analogías y el método Feynman.',
+        title: '¿Qué quieres entender?', sub: 'Explicaciones paso a paso, con ejemplos.',
+        sugg: ['Explícame qué es una derivada con un ejemplo', 'Hazme un plan de repaso para mi examen de la semana que viene', 'Resume las causas de la Revolución Francesa']
+      },
+      musica: {
+        id: 'musica', name: 'Música', icon: 'music', color: 'var(--c-musica)', cost: 20,
+        systemPrompt: 'Eres KrusseMelody, experto musical: análisis armónico, teoría, historia y recomendaciones.',
+        title: '¿Qué suena hoy?', sub: 'Armonía, teoría y recomendaciones.',
+        sugg: ['Acordes para una balada en La menor', 'Recomiéndame música parecida a Tame Impala', 'Explícame los modos griegos']
+      },
+      videojuegos: {
+        id: 'videojuegos', name: 'Videojuegos', icon: 'gamepad-2', color: 'var(--c-juegos)', cost: 7,
+        systemPrompt: 'Eres KrusseGaming, experto en lore, builds, speedruns y desarrollo de videojuegos.',
+        title: '¿A qué jugamos?', sub: 'Builds, estrategias y desarrollo de juegos.',
+        sugg: ['Cómo mejorar mi puntería en shooters', 'Ideas para empezar un juego 2D', 'Guía para hacer speedrun de un juego de plataformas']
+      }
+    };
+
+    const PRIVATE_MODE = {
+      id: 'privado', name: 'Privado', icon: 'lock', color: 'var(--c-privado)', cost: 5,
+      systemPrompt: 'Eres un acompañante personal para un espacio privado: escuchas con atención, respondes con calidez y discreción, y ayudas a ordenar ideas o a reflexionar sobre lo que el usuario comparte.'
+    };
+
+    // Cada modo aparece una sola vez en la navegación
+    const NAV_ITEMS = [...Object.values(MODES), PRIVATE_MODE];
+
+    const BRAND = '<svg class="mark" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><circle cx="9" cy="9" r="6.5" fill="var(--c-entreno)"/><circle cx="23" cy="9" r="6.5" fill="var(--c-estudio)"/><circle cx="9" cy="23" r="6.5" fill="var(--c-musica)"/><circle cx="23" cy="23" r="6.5" fill="var(--c-juegos)"/></svg>';
+
+    // =========================================================================
+    // ESTADO
+    // =========================================================================
+    const state = {
+      view: 'landing',       // 'landing' | 'app'
+      entering: false,
+      autoEnter: false,      // al volver de Stripe se entra directamente a la app
+      authReady: false,
+      user: null,            // { uid, email, name }
+      profile: null,         // { plan, tokens, grantedCap, lastResetAt } desde users/{uid} (solo lectura para el cliente)
+      stripeRole: null,      // 'premium' | 'pro' | null, desde customers/{uid}/subscriptions
+      subscription: null,
+      subsReady: false,
+      guestTokens: GUEST_TOKENS,
+      activeMode: 'entreno',
+      chats: {},
+      activeChatId: null,
+      isGenerating: false,
+      attachedImage: null,
+      musicScanning: false,
+      priv: null
+    };
+
+    let authMode = 'login';
+    let unsubProfile = null;
+    let unsubSubs = null;
+    let resetBusy = false;
+    let lastRenderedPlan = 'free';
+    let appBuilt = false;
+    const grantTried = new Set();
+
+    function resetPrivateState() {
+      state.priv = {
+        status: 'idle',        // idle | loading | ready | error
+        lock: null,            // { enabled, salt, hash, iterations }
+        unlocked: false,
+        items: {},
+        itemsLoaded: false,
+        itemsLoading: false,
+        itemsError: false,
+        tab: 'diario',
+        activeId: null,
+        generating: false
+      };
+    }
+    resetPrivateState();
+
+    // =========================================================================
+    // UTILIDADES
+    // =========================================================================
+    const $ = (id) => document.getElementById(id);
+    const icons = (root) => {
+      if (!window.lucide) return;
+      try { window.lucide.createIcons(root ? { root } : undefined); } catch (e) { window.lucide.createIcons(); }
+    };
+    const ic = (name, cls = '') => `<i data-lucide="${name}" class="ic ${cls}"></i>`;
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const rid = (p) => p + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    const isSafeId = (id) => typeof id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(id);
+    const reduceMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return '';
+      return String(text)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function renderMarkdown(md) {
+      try {
+        return window.DOMPurify.sanitize(window.marked.parse(md || ''));
+      } catch (e) {
+        return escapeHtml(md).replace(/\n/g, '<br>');
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const box = $('toasts');
+      const el = document.createElement('div');
+      el.className = 'toast' + (type === 'error' ? ' err' : '');
+      el.innerHTML = `${ic(type === 'error' ? 'alert-circle' : 'check-circle-2')}<span>${escapeHtml(message)}</span>`;
+      box.appendChild(el);
+      icons(el);
+      setTimeout(() => el.remove(), 4200);
+    }
+
+    function openModal(id, innerHtml, size = '') {
+      closeModal(id);
+      const el = document.createElement('div');
+      el.id = id;
+      el.className = 'modal';
+      el.innerHTML = `<div class="sheet ${size}" role="dialog" aria-modal="true">${innerHtml}</div>`;
+      document.body.appendChild(el);
+      icons(el);
+      const first = el.querySelector('input, textarea');
+      if (first && window.innerWidth >= 640) first.focus();
+    }
+
+    function closeModal(id) {
+      const el = $(id);
+      if (el) el.remove();
+    }
+
+    function modalHead(title, subtitle, modalId) {
+      return `
+        <div class="sheet-head">
+          <div><h3>${title}</h3>${subtitle ? `<p class="fine">${subtitle}</p>` : ''}</div>
+          <button class="icon-btn" data-act="close" data-a="${modalId}" aria-label="Cerrar">${ic('x')}</button>
+        </div>`;
+    }
+
+    function autoGrow(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+    }
+
+    // ---- Delegación de eventos: todos los botones usan data-act / data-submit / data-change ----
+    const ACT = {};
+    let downTarget = null;
+
+    document.addEventListener('pointerdown', (e) => { downTarget = e.target; });
+    document.addEventListener('click', (e) => {
+      const t = e.target;
+      if (t.classList && t.classList.contains('modal') && downTarget === t) { t.remove(); return; }
+      const el = t.closest && t.closest('[data-act]');
+      if (!el || el.disabled) return;
+      const fn = ACT[el.dataset.act];
+      if (fn) fn(el.dataset.a, el, e);
+    });
+    document.addEventListener('submit', (e) => {
+      const f = e.target.closest && e.target.closest('[data-submit]');
+      if (!f) return;
+      e.preventDefault();
+      const fn = ACT[f.dataset.submit];
+      if (fn) fn(f.dataset.a, f, e);
+    });
+    document.addEventListener('change', (e) => {
+      const el = e.target.closest && e.target.closest('[data-change]');
+      if (!el) return;
+      const fn = ACT[el.dataset.change];
+      if (fn) fn(el.dataset.a, el, e);
+    });
+    document.addEventListener('input', (e) => {
+      const el = e.target;
+      if (el.matches && el.matches('textarea[data-grow]')) {
+        autoGrow(el);
+        const send = el.form && el.form.querySelector('.send');
+        if (send) send.disabled = !el.value.trim();
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      const el = e.target;
+      if (e.key === 'Escape') {
+        const modals = document.querySelectorAll('.modal');
+        if (modals.length) { modals[modals.length - 1].remove(); return; }
+        const a = $('app');
+        if (a && a.classList.contains('drawer')) a.classList.remove('drawer');
+      }
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && el.matches && el.matches('textarea[data-enter]')) {
+        e.preventDefault();
+        if (el.form) el.form.requestSubmit();
+      }
+    });
+    // En móvil, ocultamos la barra inferior mientras se escribe
+    document.addEventListener('focusin', (e) => {
+      if (e.target.matches && e.target.matches('textarea[data-grow]') && window.innerWidth < 1024) $('app').classList.add('kb');
+    });
+    document.addEventListener('focusout', (e) => {
+      if (e.target.matches && e.target.matches('textarea[data-grow]')) $('app').classList.remove('kb');
+    });
+    // Ajusta la altura al teclado virtual
+    if (window.visualViewport) {
+      const setVh = () => {
+        document.documentElement.style.setProperty('--vh', window.visualViewport.height + 'px');
+        if (window.visualViewport.height < window.innerHeight - 80) window.scrollTo(0, 0);
+      };
+      window.visualViewport.addEventListener('resize', setVh);
+      setVh();
+    }
+
+    // =========================================================================
+    // PLANES, TOKENS Y LÍMITES
+    // =========================================================================
+    function getPlanId() {
+      if (!state.user) return 'free';
+      let best = 'free';
+      [state.stripeRole, state.profile && state.profile.plan].forEach((p) => {
+        if (PLAN_RANK[p] !== undefined && PLAN_RANK[p] > PLAN_RANK[best]) best = p;
+      });
+      return best;
+    }
+
+    const getPlan = () => PLANS_CONFIG[getPlanId()];
+
+    function getCurrentTokens() {
+      if (state.user) return state.profile ? state.profile.tokens : 0;
+      return state.guestTokens;
+    }
+
+    const tokensLabel = () => (state.user && !state.profile ? '…' : String(getCurrentTokens()));
+
+    // Comprueba que hay saldo suficiente (sin descontar)
+    function ensureTokens(cost) {
+      const available = getCurrentTokens();
+      if (available >= cost) return true;
+      showToast(
+        `No tienes tokens suficientes (${available}/${cost}). ` +
+        (state.user ? 'Se renuevan cada 6 horas o puedes subir de plan.' : 'Crea una cuenta o sube de plan.'),
+        'error'
+      );
+      openPricingModal();
+      return false;
+    }
+
+    // Descuenta tokens. Los de usuarios registrados viven en Firestore y las reglas
+    // solo permiten que el cliente los reduzca, nunca aumentarlos.
+    async function chargeTokens(cost) {
+      if (!state.user) {
+        state.guestTokens = Math.max(0, state.guestTokens - cost);
+        try { localStorage.setItem('krusse_guest_tokens', String(state.guestTokens)); } catch (e) {}
+        renderTop();
+        renderSideFoot();
+        return true;
+      }
+      try {
+        await updateDoc(doc(db, 'users', state.user.uid), { tokens: increment(-cost) });
+        return true;
+      } catch (err) {
+        console.error('chargeTokens', err);
+        showToast('No se pudieron descontar los tokens.', 'error');
+        return false;
+      }
+    }
+
+    function requireFeature(feature) {
+      if (getPlan()[feature]) return true;
+      showToast('Esta función está disponible desde el Plan Premium.', 'error');
+      openPricingModal();
+      return false;
+    }
+
+    async function withClaimRetry(fn) {
+      try {
+        return await fn();
+      } catch (err) {
+        if (err && err.code === 'permission-denied' && auth.currentUser) {
+          await auth.currentUser.getIdToken(true);
+          return await fn();
+        }
+        throw err;
+      }
+    }
+
+    // Recarga cada 6 horas (las reglas de Firestore lo validan con la hora del servidor)
+    async function checkSixHourReset() {
+      if (!state.user || !state.profile || resetBusy) return;
+      if (Date.now() - state.profile.lastResetAt < SIX_HOURS_MS) return;
+      const cap = getPlan().tokens;
+      resetBusy = true;
+      try {
+        await withClaimRetry(() => updateDoc(doc(db, 'users', state.user.uid), {
+          tokens: cap, lastResetAt: serverTimestamp(), grantedCap: cap
+        }));
+        showToast(`Tus tokens se han restablecido a ${cap}.`);
+      } catch (err) {
+        console.warn('Recarga pendiente:', err && err.code);
+      } finally {
+        resetBusy = false;
+      }
+    }
+
+    // Al subir de plan se concede una vez el nuevo límite de tokens
+    async function syncPlanGrant() {
+      if (!state.user || !state.profile) return;
+      const cap = getPlan().tokens;
+      if (cap <= (state.profile.grantedCap || 0)) return;
+      const key = state.user.uid + ':' + cap;
+      if (grantTried.has(key)) return;
+      grantTried.add(key);
+      try {
+        await withClaimRetry(() => updateDoc(doc(db, 'users', state.user.uid), { tokens: cap, grantedCap: cap }));
+        showToast(`${getPlan().name} activo: ${cap} tokens disponibles.`);
+      } catch (err) {
+        console.warn('No se pudo aplicar el nuevo límite de tokens:', err && err.code);
+      }
+    }
+
+    function nextResetText() {
+      if (!state.profile) return '—';
+      const next = state.profile.lastResetAt + SIX_HOURS_MS;
+      if (next <= Date.now()) return 'en breve';
+      return new Date(next).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function onProfileChanged() {
+      const planNow = getPlanId();
+      if (planNow !== lastRenderedPlan) {
+        lastRenderedPlan = planNow;
+        refreshAll();
+      } else if (state.view === 'app') {
+        renderTop();
+        renderSideFoot();
+      }
+      checkSixHourReset();
+      syncPlanGrant();
+    }
+
+    // =========================================================================
+    // AUTENTICACIÓN + FIRESTORE (users/{uid})
+    // =========================================================================
+    async function ensureUserDoc(fbUser) {
+      const ref = doc(db, 'users', fbUser.uid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) return;
+      const cap = PLANS_CONFIG.free.tokens;
+      await setDoc(ref, {
+        email: fbUser.email || '',
+        name: (fbUser.email || 'usuario').split('@')[0],
+        plan: 'free',
+        tokens: cap,
+        grantedCap: cap,
+        lastResetAt: serverTimestamp(),
+        createdAt: serverTimestamp()
+      });
+    }
+
+    function detachUserListeners() {
+      if (unsubProfile) { unsubProfile(); unsubProfile = null; }
+      if (unsubSubs) { unsubSubs(); unsubSubs = null; }
+    }
+
+    function attachUserListeners(uid) {
+      // Plan y tokens: lectura en tiempo real (el cliente no puede escribir el plan)
+      unsubProfile = onSnapshot(doc(db, 'users', uid), (snap) => {
+        if (!snap.exists()) return;
+        const d = snap.data({ serverTimestamps: 'estimate' });
+        state.profile = {
+          plan: d.plan || 'free',
+          tokens: Number.isFinite(d.tokens) ? d.tokens : 0,
+          grantedCap: d.grantedCap || 0,
+          lastResetAt: d.lastResetAt && d.lastResetAt.toMillis ? d.lastResetAt.toMillis() : Date.now()
+        };
+        onProfileChanged();
+      }, (err) => console.error('Perfil:', err));
+
+      // Rol activo desde la extensión "Run Payments with Stripe"
+      unsubSubs = onSnapshot(
+        query(collection(db, 'customers', uid, 'subscriptions'), where('status', 'in', ['trialing', 'active'])),
+        async (snap) => {
+          let best = null;
+          snap.forEach((d) => {
+            const data = d.data();
+            if (PLAN_RANK[data.role] > 0 && (!best || PLAN_RANK[data.role] > PLAN_RANK[best.role])) {
+              best = {
+                role: data.role,
+                periodEnd: data.current_period_end && data.current_period_end.toMillis ? data.current_period_end.toMillis() : null,
+                cancelAtPeriodEnd: !!data.cancel_at_period_end
+              };
+            }
+          });
+          const prevRole = state.stripeRole;
+          state.stripeRole = best ? best.role : null;
+          state.subscription = best;
+          if (prevRole !== state.stripeRole) {
+            try { if (auth.currentUser) await auth.currentUser.getIdToken(true); } catch (e) {}
+            if (state.subsReady && (PLAN_RANK[state.stripeRole] || 0) > (PLAN_RANK[prevRole] || 0)) {
+              showToast(`¡${PLANS_CONFIG[state.stripeRole].name} activado!`);
+            }
+            onProfileChanged();
+          }
+          state.subsReady = true;
+        },
+        (err) => console.warn('Suscripciones:', err && err.code)
+      );
+    }
+
+    async function loadChats() {
+      try {
+        const snap = await getDocs(collection(db, 'users', state.user.uid, 'chats'));
+        snap.forEach((d) => {
+          const x = d.data();
+          if (!isSafeId(d.id) || !MODES[x.mode]) return;
+          state.chats[d.id] = {
+            id: d.id,
+            mode: x.mode,
+            title: x.title || 'Chat',
+            messages: Array.isArray(x.messages) ? x.messages : [],
+            createdAt: x.createdAt || 0,
+            updatedAt: x.updatedAt || 0
+          };
+        });
+      } catch (err) {
+        console.error('loadChats', err);
+        showToast('No se pudo cargar tu historial de chats.', 'error');
+      }
+    }
+
+    onAuthStateChanged(auth, async (fbUser) => {
+      detachUserListeners();
+      state.user = null;
+      state.profile = null;
+      state.stripeRole = null;
+      state.subscription = null;
+      state.subsReady = false;
+      state.chats = {};
+      state.activeChatId = null;
+      state.attachedImage = null;
+      resetPrivateState();
+
+      if (fbUser) {
+        state.user = {
+          uid: fbUser.uid,
+          email: fbUser.email || '',
+          name: fbUser.displayName || (fbUser.email || '').split('@')[0] || 'Usuario'
+        };
+        updateLanding();
+        try {
+          await ensureUserDoc(fbUser);
+        } catch (err) {
+          console.error('ensureUserDoc', err);
+          showToast('No se pudo cargar tu perfil. Revisa las reglas de Firestore.', 'error');
+        }
+        attachUserListeners(fbUser.uid);
+        await Promise.all([loadChats(), loadPrivateLock()]);
+      }
+      state.authReady = true;
+      lastRenderedPlan = getPlanId();
+      if (state.autoEnter && state.user && state.view === 'landing') {
+        state.autoEnter = false;
+        goApp();
+        return;
+      }
+      refreshAll();
+    });
+
+    function authErrorMessage(err) {
+      const map = {
+        'auth/invalid-email': 'El correo no es válido.',
+        'auth/user-not-found': 'Correo o contraseña incorrectos.',
+        'auth/wrong-password': 'Correo o contraseña incorrectos.',
+        'auth/invalid-credential': 'Correo o contraseña incorrectos.',
+        'auth/email-already-in-use': 'Ese correo ya tiene una cuenta. Inicia sesión.',
+        'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.',
+        'auth/too-many-requests': 'Demasiados intentos. Espera un momento e inténtalo de nuevo.',
+        'auth/network-request-failed': 'Sin conexión. Revisa tu internet.',
+        'auth/operation-not-allowed': 'El acceso con correo y contraseña no está activado en Firebase.'
+      };
+      return map[err && err.code] || 'No se pudo completar la operación. Inténtalo de nuevo.';
+    }
+
+    // =========================================================================
+    // IA (hook de backend)
+    // =========================================================================
+    const modeSystem = (mode) => mode.systemPrompt + STYLE_RULES;
+
+    function historyFor(container) {
+      const h = container.messages
+        .filter((m) => !m.pending && !m.error && m.content)
+        .map((m) => ({ role: m.role, content: m.content }))
+        .slice(-20);
+      while (h.length && h[0].role === 'assistant') h.shift();
+      return h;
+    }
+
+    async function callAI({ system, messages, image = null }) {
+      if (!APP_CONFIG.useBackend) {
+        await sleep(450);
+        const last = messages.length ? messages[messages.length - 1].content : '';
+        return `Esta es una respuesta de demostración: el asistente de IA todavía no está conectado a un servidor.\n\nTu mensaje: *"${String(last).slice(0, 200)}"*`;
+      }
+      const plan = getPlan();
+      const headers = { 'Content-Type': 'application/json' };
+      if (auth.currentUser) headers.Authorization = 'Bearer ' + await auth.currentUser.getIdToken();
+      const res = await fetch(APP_CONFIG.proxyEndpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ model: plan.model, priority: plan.priority, systemPrompt: system, messages, image })
+      });
+      if (!res.ok) throw new Error('El asistente no está disponible ahora mismo. Inténtalo de nuevo en un momento.');
+      const data = await res.json();
+      if (!data || !data.text) throw new Error('No he podido generar una respuesta. Inténtalo de nuevo.');
+      return data.text;
+    }
+
+    // =========================================================================
+    // ESTRUCTURA DE LA APLICACIÓN
+    // =========================================================================
+    const TIPS = {
+      estudio: 'Adjunta una foto de tus apuntes y usa los botones de abajo para crear un resumen o un test.',
+      musica: 'Pulsa «Escuchar canción» para identificar lo que suena a tu alrededor.'
+    };
+
+    function buildApp() {
+      if (appBuilt) return;
+      $('app').innerHTML = `
+        <aside id="side" class="side" aria-label="Menú"></aside>
+        <div class="scrim" data-act="closeDrawer"></div>
+        <section class="work">
+          <header id="top" class="top"></header>
+          <main id="main" class="main"></main>
+        </section>
+        <nav id="tabs" class="tabs" aria-label="Modos"></nav>`;
+      appBuilt = true;
+    }
+
+    function refreshAll() {
+      if (state.view !== 'app') { updateLanding(); return; }
+      buildApp();
+      ensureActiveChat();
+      paintApp();
+    }
+
+    function paintApp() {
+      $('app').dataset.mode = state.activeMode;
+      renderTop();
+      renderSide();
+      renderTabs();
+      renderMain();
+    }
+
+    function activeModeObj() {
+      return state.activeMode === 'privado' ? PRIVATE_MODE : MODES[state.activeMode];
+    }
+
+    function currentTitle() {
+      if (state.activeMode === 'privado') {
+        const it = privActive();
+        if (!it) return 'Modo Privado';
+        return it.title || (it.type === 'note' ? 'Entrada sin título' : 'Chat privado');
+      }
+      const chat = state.chats[state.activeChatId];
+      return chat && hasUserMsg(chat.messages) ? chat.title : 'Nuevo chat';
+    }
+
+    function renderTop() {
+      const el = $('top');
+      if (!el) return;
+      const m = activeModeObj();
+      const initial = state.user ? escapeHtml((state.user.name || state.user.email || 'U').charAt(0).toUpperCase()) : '';
+      el.innerHTML = `
+        <button class="icon-btn lg-hide" data-act="openDrawer" aria-label="Abrir menú">${ic('menu')}</button>
+        <div class="top-title">
+          <span class="mchip">${ic(m.icon)}</span>
+          <div class="tt"><b>${escapeHtml(currentTitle())}</b><small>${m.name}</small></div>
+        </div>
+        <div class="top-r">
+          ${state.activeMode === 'privado' ? privTopButtons() : ''}
+          <button class="pill" data-act="openPricing" aria-label="Tokens y planes">${ic('coins')}<span>${tokensLabel()}</span></button>
+          ${state.user
+            ? `<button class="avatar" data-act="openSettings" aria-label="Mi cuenta">${initial}</button>`
+            : `<button class="btn btn-accent btn-sm" data-act="openAuth">Entrar</button>`}
+        </div>`;
+      icons(el);
+    }
+
+    function renderTabs() {
+      const el = $('tabs');
+      if (!el) return;
+      el.innerHTML = NAV_ITEMS.map((m) => `
+        <button class="tab ${m.id === state.activeMode ? 'on' : ''}" style="--tc: ${m.color}" data-act="switchMode" data-a="${m.id}" aria-label="${m.name}">
+          <span class="tab-ic">${ic(m.icon)}</span><span>${m.name}</span>
+        </button>`).join('');
+      icons(el);
+    }
+
+    function renderSide() {
+      const el = $('side');
+      if (!el) return;
+      const isPriv = state.activeMode === 'privado';
+      el.innerHTML = `
+        <div class="side-head">
+          <button class="brand" data-act="goHome" aria-label="Ir al inicio">${BRAND}<span>KrusseAI</span></button>
+          <button class="icon-btn lg-hide" data-act="closeDrawer" aria-label="Cerrar menú">${ic('x')}</button>
+        </div>
+        <nav class="side-modes" aria-label="Modos">
+          ${NAV_ITEMS.map((m) => `
+            <button class="mode-row ${m.id === state.activeMode ? 'on' : ''}" style="--mc: ${m.color}" data-act="switchMode" data-a="${m.id}">
+              <span class="mode-dot">${ic(m.icon, 'ic-s')}</span><span>${m.name}</span>
+            </button>`).join('')}
+        </nav>
+        ${isPriv ? privateSideTop() : `<button class="btn btn-accent btn-block" data-act="newChat">${ic('plus')}Nuevo chat</button>`}
+        <div id="side-list" class="side-list">${isPriv ? privateSideList() : chatListHtml()}</div>
+        <div id="side-foot" class="side-foot"></div>`;
+      renderSideFoot();
+      icons(el);
+    }
+
+    function renderSideFoot() {
+      const el = $('side-foot');
+      if (!el) return;
+      const cap = state.user ? getPlan().tokens : GUEST_TOKENS;
+      const p = Math.max(0, Math.min(100, Math.round((getCurrentTokens() / cap) * 100)));
+      if (state.user) {
+        el.innerHTML = `
+          <div class="foot-row"><b>${tokensLabel()} tokens</b><span>${getPlan().name}</span></div>
+          <div class="meter" style="--p: ${p}%"><i></i></div>
+          <div class="foot-row"><span>Próxima recarga</span><b>${nextResetText()}</b></div>`;
+      } else {
+        el.innerHTML = `
+          <div class="foot-row"><b>${tokensLabel()} tokens</b><span>Invitado</span></div>
+          <div class="meter" style="--p: ${p}%"><i></i></div>
+          <p class="fine">Crea una cuenta gratis para guardar tus chats y recibir ${PLANS_CONFIG.free.tokens} tokens cada 6 horas.</p>
+          <button class="btn btn-primary btn-sm btn-block" data-act="openAuth" data-a="register">Crear cuenta gratis</button>`;
+      }
+    }
+
+    function renderMain() {
+      const main = $('main');
+      if (!main) return;
+      if (state.activeMode === 'privado') renderPrivateMain(main);
+      else renderChat(main);
+    }
+
+    ACT.openDrawer = () => $('app').classList.add('drawer');
+    ACT.closeDrawer = () => $('app').classList.remove('drawer');
+    const closeDrawerNow = () => { const a = $('app'); if (a) a.classList.remove('drawer'); };
+
+    ACT.switchMode = (id) => {
+      if (!NAV_ITEMS.some((m) => m.id === id)) return;
+      if (id !== state.activeMode) dropEmptyChat();
+      state.activeMode = id;
+      state.attachedImage = null;
+      ensureActiveChat();
+      closeDrawerNow();
+      paintApp();
+    };
+
+    // =========================================================================
+    // CHATS (Entreno, Estudio, Música, Videojuegos)
+    // =========================================================================
+    function hasUserMsg(messages) {
+      return messages.some((m) => m.role === 'user');
+    }
+
+    function sortedChats(modeId) {
+      return Object.values(state.chats)
+        .filter((c) => c.mode === modeId && (hasUserMsg(c.messages) || c.id === state.activeChatId))
+        .sort((a, b) => b.updatedAt - a.updatedAt);
+    }
+
+    function createChatObject(modeId) {
+      const chat = {
+        id: rid('c_'),
+        mode: modeId,
+        title: 'Nuevo chat',
+        messages: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      state.chats[chat.id] = chat;
+      state.activeChatId = chat.id;
+      return chat;
+    }
+
+    function dropEmptyChat() {
+      const c = state.chats[state.activeChatId];
+      if (c && !hasUserMsg(c.messages)) delete state.chats[c.id];
+    }
+
+    function ensureActiveChat() {
+      if (state.activeMode === 'privado') return;
+      const current = state.chats[state.activeChatId];
+      if (current && current.mode === state.activeMode) return;
+      const list = sortedChats(state.activeMode);
+      if (list.length) state.activeChatId = list[0].id;
+      else createChatObject(state.activeMode);
+    }
+
+    function chatListHtml() {
+      const list = sortedChats(state.activeMode).filter((c) => hasUserMsg(c.messages));
+      if (!list.length) return `<p class="side-empty">Aquí aparecerán tus chats de ${MODES[state.activeMode].name}.</p>`;
+      return list.map((c) => `
+        <div class="item ${c.id === state.activeChatId ? 'on' : ''}">
+          <button class="item-main" data-act="selectChat" data-a="${c.id}"><span>${escapeHtml(c.title)}</span></button>
+          <button class="del" data-act="deleteChat" data-a="${c.id}" aria-label="Eliminar chat">${ic('trash-2', 'ic-s')}</button>
+        </div>`).join('');
+    }
+
+    ACT.newChat = () => {
+      const cur = state.chats[state.activeChatId];
+      if (!(cur && cur.mode === state.activeMode && !hasUserMsg(cur.messages))) createChatObject(state.activeMode);
+      closeDrawerNow();
+      renderTop();
+      renderSide();
+      renderMain();
+      const i = $('chat-input');
+      if (i && window.innerWidth >= 1024) i.focus();
+    };
+
+    ACT.selectChat = (id) => {
+      if (!state.chats[id]) return;
+      if (id !== state.activeChatId) dropEmptyChat();
+      state.activeChatId = id;
+      state.attachedImage = null;
+      closeDrawerNow();
+      renderTop();
+      renderSide();
+      renderMain();
+    };
+
+    ACT.deleteChat = async (id) => {
+      if (!state.chats[id]) return;
+      if (!window.confirm('¿Eliminar este chat? No se puede deshacer.')) return;
+      delete state.chats[id];
+      if (state.user) {
+        try {
+          await deleteDoc(doc(db, 'users', state.user.uid, 'chats', id));
+        } catch (err) {
+          console.error('deleteChat', err);
+          showToast('No se pudo eliminar el chat.', 'error');
+        }
+      }
+      ensureActiveChat();
+      renderTop();
+      renderSide();
+      renderMain();
+    };
+
+    function cleanMessages(messages) {
+      return messages
+        .filter((m) => !m.pending && !m.error)
+        .slice(-200)
+        .map((m) => {
+          const out = { role: m.role, content: String(m.content || '') };
+          if (m.hasImage) out.hasImage = true;
+          if (m.quiz) out.quiz = JSON.parse(JSON.stringify(m.quiz));
+          return out;
+        });
+    }
+
+    async function saveChat(chat) {
+      if (!state.user || !state.chats[chat.id]) return;
+      try {
+        await setDoc(doc(db, 'users', state.user.uid, 'chats', chat.id), {
+          mode: chat.mode,
+          title: chat.title,
+          messages: cleanMessages(chat.messages),
+          createdAt: chat.createdAt,
+          updatedAt: chat.updatedAt
+        });
+      } catch (err) {
+        console.error('saveChat', err);
+        showToast('No se pudo guardar el chat.', 'error');
+      }
+    }
+
+    const isActiveChat = (chat) => state.activeMode === chat.mode && state.activeChatId === chat.id;
+
+    function pushTurn(container, userText, hasImage) {
+      container.messages.push({ role: 'user', content: userText, hasImage: !!hasImage });
+      const aiMsg = { role: 'assistant', content: '', pending: true };
+      container.messages.push(aiMsg);
+      container.updatedAt = Date.now();
+      return aiMsg;
+    }
+
+    function dockHtml({ placeholder, submit, photo }) {
+      return `
+        <div class="dock">
+          <div class="tools" id="tools"></div>
+          ${photo ? `<div class="attach" id="attach" hidden><img id="attach-img" alt="Foto adjunta"><span>Foto lista para enviar</span><button class="link" data-act="removeImage">Quitar</button></div>` : ''}
+          <form class="composer" data-submit="${submit}">
+            ${photo ? `<button type="button" class="icon-btn" data-act="pickImage" aria-label="Adjuntar foto">${ic(getPlan().photos ? 'camera' : 'lock')}</button>
+            <input type="file" id="image-input" accept="image/*" hidden data-change="attachImage">` : ''}
+            <textarea id="chat-input" rows="1" data-enter data-grow enterkeyhint="send" placeholder="${placeholder}" aria-label="Mensaje"></textarea>
+            <button class="send" type="submit" aria-label="Enviar" disabled>${ic('arrow-up')}</button>
+          </form>
+        </div>`;
+    }
+
+    function renderChat(main) {
+      ensureActiveChat();
+      const chat = state.chats[state.activeChatId];
+      const mode = MODES[chat.mode];
+      main.innerHTML = `
+        <div class="chat">
+          <div class="scroll" id="scroll"><div class="thread" id="thread"></div></div>
+          ${dockHtml({ placeholder: `Escribe en ${mode.name}…`, submit: 'send', photo: true })}
+        </div>`;
+      renderTools();
+      renderThread('bottom');
+      renderAttachment();
+      icons(main);
+    }
+
+    function emptyHtml(info, tip) {
+      return `
+        <div class="empty">
+          <div class="empty-ic">${ic(info.icon)}</div>
+          <h2>${info.title}</h2>
+          <p>${info.sub}</p>
+          ${tip ? `<p class="fine">${tip}</p>` : ''}
+          ${info.sugg && info.sugg.length ? `<div class="sugg">${info.sugg.map((s, i) => `<button data-act="suggest" data-a="${i}">${escapeHtml(s)}</button>`).join('')}</div>` : ''}
+        </div>`;
+    }
+
+    function threadHtml(messages, mode) {
+      return messages.map((m, idx) => {
+        if (m.role === 'user') {
+          return `<div class="msg me"><div class="body">${m.hasImage ? `<div class="photo-note">${ic('camera', 'ic-s')}<span>Foto adjunta</span></div>` : ''}<div style="white-space:pre-wrap;overflow-wrap:anywhere">${escapeHtml(m.content)}</div></div></div>`;
+        }
+        const inner = m.pending
+          ? '<div class="typing"><i></i><i></i><i></i></div>'
+          : `<div class="md">${renderMarkdown(m.content)}</div>${m.quiz ? quizHtml(m.quiz, idx) : ''}`;
+        return `<div class="msg ai"><div class="av">${ic(mode.icon, 'ic-s')}</div><div class="body">${inner}</div></div>`;
+      }).join('');
+    }
+
+    // scrollMode: 'keep' | 'bottom' | 'smooth'
+    function renderThread(scrollMode) {
+      const list = $('thread');
+      const sc = $('scroll');
+      if (!list || !sc) return;
+      const prev = sc.scrollTop;
+      let messages = [];
+      let mode = activeModeObj();
+      let empty = '';
+
+      if (state.activeMode === 'privado') {
+        const item = privActive();
+        messages = item && item.type === 'chat' ? item.messages : [];
+        if (!hasUserMsg(messages)) {
+          empty = emptyHtml({ icon: 'lock', title: '¿De qué quieres hablar?', sub: 'Esta conversación es solo tuya.', sugg: [] });
+        }
+      } else {
+        const chat = state.chats[state.activeChatId];
+        if (chat) {
+          messages = chat.messages;
+          mode = MODES[chat.mode];
+          if (!hasUserMsg(messages)) empty = emptyHtml(mode, TIPS[mode.id]);
+        }
+      }
+
+      list.innerHTML = empty || threadHtml(messages, mode);
+      if (window.hljs) {
+        list.querySelectorAll('pre code').forEach((el) => { try { window.hljs.highlightElement(el); } catch (e) {} });
+      }
+      icons(list);
+      if (empty) sc.scrollTop = 0;
+      else if (scrollMode === 'keep') sc.scrollTop = prev;
+      else if (scrollMode === 'smooth' && !reduceMotion()) sc.scrollTo({ top: sc.scrollHeight, behavior: 'smooth' });
+      else sc.scrollTop = sc.scrollHeight;
+    }
+
+    function resetInput() {
+      const input = $('chat-input');
+      if (!input) return;
+      input.value = '';
+      autoGrow(input);
+      const send = input.form && input.form.querySelector('.send');
+      if (send) send.disabled = true;
+    }
+
+    async function sendMessage(text) {
+      if (state.isGenerating || !text) return;
+      const chat = state.chats[state.activeChatId];
+      if (!chat) return;
+      const mode = MODES[chat.mode];
+      if (!ensureTokens(mode.cost)) return;
+
+      resetInput();
+      const image = state.attachedImage;
+      state.attachedImage = null;
+      renderAttachment();
+
+      if (!hasUserMsg(chat.messages)) chat.title = text.slice(0, 40) + (text.length > 40 ? '…' : '');
+
+      state.isGenerating = true;
+      const aiMsg = pushTurn(chat, text, !!image);
+      renderTop();
+      renderSide();
+      renderThread('smooth');
+
+      let ok = true;
+      try {
+        aiMsg.content = await callAI({ system: modeSystem(mode), messages: historyFor(chat), image });
+      } catch (err) {
+        ok = false;
+        aiMsg.content = `⚠️ ${err.message}`;
+        aiMsg.error = true;
+      }
+      aiMsg.pending = false;
+      state.isGenerating = false;
+      chat.updatedAt = Date.now();
+      if (isActiveChat(chat)) renderThread('smooth');
+
+      if (ok) await chargeTokens(mode.cost);
+      await saveChat(chat);
+    }
+
+    ACT.send = () => {
+      const input = $('chat-input');
+      if (input) sendMessage(input.value.trim());
+    };
+
+    ACT.suggest = (i) => {
+      const mode = MODES[state.activeMode];
+      if (mode && mode.sugg[Number(i)]) sendMessage(mode.sugg[Number(i)]);
+    };
+
+    // ---- Fotos ----
+    ACT.pickImage = () => {
+      if (!requireFeature('photos')) return;
+      const input = $('image-input');
+      if (input) input.click();
+    };
+
+    function compressImage(file, max = 1024, quality = 0.75) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('read'));
+        reader.onload = () => {
+          const img = new Image();
+          img.onerror = () => reject(new Error('img'));
+          img.onload = () => {
+            let w = img.width, h = img.height;
+            if (w > max || h > max) {
+              if (w > h) { h = Math.round((h * max) / w); w = max; }
+              else { w = Math.round((w * max) / h); h = max; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    ACT.attachImage = async (a, el) => {
+      const file = el.files[0];
+      el.value = '';
+      if (!file) return;
+      if (!requireFeature('photos')) return;
+      try {
+        state.attachedImage = await compressImage(file);
+        renderAttachment();
+      } catch (err) {
+        showToast('No se pudo leer la imagen.', 'error');
+      }
+    };
+
+    ACT.removeImage = () => {
+      state.attachedImage = null;
+      renderAttachment();
+    };
+
+    function renderAttachment() {
+      const box = $('attach');
+      if (!box) return;
+      if (state.attachedImage) {
+        $('attach-img').src = state.attachedImage;
+        box.hidden = false;
+      } else {
+        box.hidden = true;
+      }
+    }
+
+    // ---- Herramientas por modo ----
+    function renderTools() {
+      const el = $('tools');
+      if (!el) return;
+      if (state.activeMode === 'estudio') {
+        const locked = !getPlan().studyTools;
+        const chip = (kind, label, cost) =>
+          `<button class="chip" data-act="studyTool" data-a="${kind}">${locked ? ic('lock', 'ic-s') : ''}${label}<small>${cost} tokens</small></button>`;
+        el.innerHTML = chip('summary', 'Resumen', STUDY_COSTS.summary) + chip('5', 'Test de 5', STUDY_COSTS[5]) +
+          chip('10', 'Test de 10', STUDY_COSTS[10]) + chip('15', 'Simulacro de 15', STUDY_COSTS[15]);
+      } else if (state.activeMode === 'musica') {
+        const s = state.musicScanning;
+        el.innerHTML = `<button class="chip" data-act="listen" ${s ? 'disabled' : ''}>${ic(s ? 'loader-2' : 'mic', s ? 'ic-s spin' : 'ic-s')}${s ? 'Escuchando…' : 'Escuchar canción'}</button>`;
+      } else {
+        el.innerHTML = '';
+      }
+      icons(el);
+    }
+
+    ACT.listen = () => {
+      if (state.musicScanning) return;
+      const chat = state.chats[state.activeChatId];
+      if (!chat || chat.mode !== 'musica') return;
+      state.musicScanning = true;
+      renderTools();
+
+      setTimeout(async () => {
+        state.musicScanning = false;
+        chat.messages.push({ role: 'user', content: 'He grabado un fragmento de audio. ¿Qué canción es y cuál es su análisis musical?' });
+        chat.messages.push({
+          role: 'assistant',
+          content: '### 🎵 Canción identificada\n\n- **Título:** Blinding Lights\n- **Artista:** The Weeknd\n- **Género:** Synth-pop / New Wave\n- **Análisis armónico:** compás de 4/4 a 171 BPM, tonalidad de Fa menor. Destacan los sintetizadores ochenteros y una línea de bajo enérgica.'
+        });
+        if (!chat.title || chat.title === 'Nuevo chat') chat.title = 'Canción identificada';
+        chat.updatedAt = Date.now();
+        if (isActiveChat(chat)) { renderTools(); renderTop(); renderSide(); renderThread('smooth'); }
+        showToast('Canción identificada: "Blinding Lights" - The Weeknd');
+        await saveChat(chat);
+      }, 3500);
+    };
+
+    // ---- Estudio: resumen y exámenes tipo test ----
+    async function generateQuiz(n, image) {
+      if (!APP_CONFIG.useBackend) {
+        await sleep(500);
+        const questions = Array.from({ length: n }, (_, i) => {
+          const correct = (i * 2 + 1) % 3;
+          const options = ['Opción incorrecta de ejemplo', 'Opción incorrecta de ejemplo', 'Opción incorrecta de ejemplo'];
+          options[correct] = 'Opción correcta de ejemplo';
+          return { q: `Pregunta de ejemplo ${i + 1} sobre tus apuntes (modo demostración)`, options, correct };
+        });
+        return { questions, answers: Array(n).fill(-1), graded: false };
+      }
+      const prompt = `Crea un examen tipo test de ${n} preguntas basado en estos apuntes. Responde únicamente con JSON válido, sin texto adicional, con este formato: {"questions":[{"q":"...","options":["...","...","...","..."],"correct":0,"explanation":"..."}]}. "correct" es el índice (empezando en 0) de la opción correcta.`;
+      const raw = await callAI({ system: modeSystem(MODES.estudio), messages: [{ role: 'user', content: prompt }], image });
+      const match = String(raw).match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('No se pudo generar el examen. Inténtalo de nuevo.');
+      let parsed;
+      try { parsed = JSON.parse(match[0]); } catch (e) { throw new Error('No se pudo generar el examen. Inténtalo de nuevo.'); }
+      const questions = (parsed.questions || [])
+        .filter((q) => q && typeof q.q === 'string' && Array.isArray(q.options) && q.options.length >= 2 &&
+          Number.isInteger(q.correct) && q.correct >= 0 && q.correct < q.options.length)
+        .slice(0, n)
+        .map((q) => ({
+          q: q.q,
+          options: q.options.map(String),
+          correct: q.correct,
+          explanation: typeof q.explanation === 'string' ? q.explanation : ''
+        }));
+      if (!questions.length) throw new Error('No se pudo generar el examen. Inténtalo de nuevo.');
+      return { questions, answers: Array(questions.length).fill(-1), graded: false };
+    }
+
+    ACT.studyTool = async (kind) => {
+      if (state.isGenerating) return;
+      if (!requireFeature('studyTools')) return;
+      if (!state.attachedImage) {
+        showToast('Adjunta primero una foto de tus apuntes con el botón de la cámara.', 'error');
+        return;
+      }
+      const chat = state.chats[state.activeChatId];
+      if (!chat || chat.mode !== 'estudio') return;
+
+      const n = kind === 'summary' ? 0 : Number(kind);
+      const cost = n === 0 ? STUDY_COSTS.summary : STUDY_COSTS[n];
+      if (!cost || !ensureTokens(cost)) return;
+
+      const image = state.attachedImage;
+      state.attachedImage = null;
+      renderAttachment();
+
+      const prompt = n === 0
+        ? 'Genera un resumen estructurado con los puntos clave de esta foto de apuntes.'
+        : `Crea un examen tipo test de ${n} preguntas basado en estos apuntes.`;
+
+      if (!hasUserMsg(chat.messages)) chat.title = n === 0 ? 'Resumen de apuntes' : `Test de ${n} preguntas`;
+      state.isGenerating = true;
+      const aiMsg = pushTurn(chat, prompt, true);
+      renderTop();
+      renderSide();
+      renderThread('smooth');
+
+      let ok = true;
+      try {
+        if (n === 0) {
+          aiMsg.content = await callAI({ system: modeSystem(MODES.estudio), messages: [{ role: 'user', content: prompt }], image });
+        } else {
+          aiMsg.quiz = await generateQuiz(n, image);
+          aiMsg.content = `Examen de ${aiMsg.quiz.questions.length} preguntas listo. Elige una respuesta en cada pregunta y pulsa «Corregir examen».`;
+        }
+      } catch (err) {
+        ok = false;
+        aiMsg.content = `⚠️ ${err.message}`;
+        aiMsg.error = true;
+      }
+      aiMsg.pending = false;
+      state.isGenerating = false;
+      chat.updatedAt = Date.now();
+      if (isActiveChat(chat)) renderThread('smooth');
+
+      if (ok) await chargeTokens(cost);
+      await saveChat(chat);
+    };
+
+    function quizHtml(quiz, msgIdx) {
+      const graded = !!quiz.graded;
+      const questions = quiz.questions.map((q, qi) => {
+        const opts = q.options.map((opt, oi) => {
+          const picked = quiz.answers[qi] === oi;
+          let cls = picked ? 'sel' : '';
+          if (graded) cls = oi === q.correct ? 'ok' : (picked ? 'bad' : 'dim');
+          return `<button class="opt ${cls}" ${graded ? 'disabled' : ''} data-act="answer" data-a="${msgIdx}:${qi}:${oi}">${String.fromCharCode(65 + oi)}) ${escapeHtml(opt)}</button>`;
+        }).join('');
+        return `<div class="q"><p>${qi + 1}. ${escapeHtml(q.q)}</p>${opts}${graded && q.explanation ? `<small>${escapeHtml(q.explanation)}</small>` : ''}</div>`;
+      }).join('');
+      const footer = graded
+        ? `<div class="result">Resultado: ${quiz.score}/${quiz.questions.length}. Nota ${quiz.grade}/10</div>`
+        : `<button class="btn btn-accent btn-sm" data-act="grade" data-a="${msgIdx}">Corregir examen</button>`;
+      return `<div class="quiz">${questions}${footer}</div>`;
+    }
+
+    ACT.answer = (a) => {
+      const [msgIdx, qi, oi] = String(a).split(':').map(Number);
+      const chat = state.chats[state.activeChatId];
+      const msg = chat && chat.messages[msgIdx];
+      if (!msg || !msg.quiz || msg.quiz.graded) return;
+      msg.quiz.answers[qi] = oi;
+      renderThread('keep');
+    };
+
+    ACT.grade = async (a) => {
+      const chat = state.chats[state.activeChatId];
+      const msg = chat && chat.messages[Number(a)];
+      if (!msg || !msg.quiz || msg.quiz.graded) return;
+      const quiz = msg.quiz;
+      const score = quiz.questions.reduce((acc, q, i) => acc + (quiz.answers[i] === q.correct ? 1 : 0), 0);
+      quiz.score = score;
+      quiz.grade = Math.round((score / quiz.questions.length) * 100) / 10;
+      quiz.graded = true;
+      chat.updatedAt = Date.now();
+      renderThread('keep');
+      showToast(`Examen corregido: ${score}/${quiz.questions.length}. Nota ${quiz.grade}/10`);
+
+      await saveChat(chat);
+      if (state.user) {
+        try {
+          await addDoc(collection(db, 'users', state.user.uid, 'exams'), {
+            chatId: chat.id,
+            numQuestions: quiz.questions.length,
+            score: quiz.score,
+            grade: quiz.grade,
+            questions: JSON.parse(JSON.stringify(quiz.questions)),
+            answers: quiz.answers.slice(),
+            createdAt: serverTimestamp()
+          });
+        } catch (err) {
+          console.error('saveExam', err);
+        }
+      }
+    };
+
+    // =========================================================================
+    // ACCESO (modal de inicio de sesión / registro)
+    // =========================================================================
+    ACT.close = (id) => closeModal(id);
+
+    ACT.openAuth = (a) => {
+      authMode = a === 'register' ? 'register' : 'login';
+      renderAuthModal();
+    };
+
+    ACT.authMode = (mode) => {
+      const email = $('auth-email') ? $('auth-email').value : '';
+      authMode = mode;
+      renderAuthModal();
+      if (email && $('auth-email')) $('auth-email').value = email;
+    };
+
+    function renderAuthModal() {
+      const isLogin = authMode === 'login';
+      openModal('auth-modal', `
+        ${modalHead(isLogin ? 'Iniciar sesión' : 'Crear cuenta',
+          isLogin ? 'Entra para recuperar tus chats y tus tokens.' : 'Es gratis. Recibes 500 tokens cada 6 horas.', 'auth-modal')}
+        <div class="seg">
+          <button type="button" class="${isLogin ? 'on' : ''}" data-act="authMode" data-a="login">Entrar</button>
+          <button type="button" class="${!isLogin ? 'on' : ''}" data-act="authMode" data-a="register">Registrarse</button>
+        </div>
+        <form data-submit="authSubmit">
+          <div class="field">
+            <label for="auth-email">Correo electrónico</label>
+            <input id="auth-email" class="input" type="email" required autocomplete="email" placeholder="tu@correo.com" />
+          </div>
+          <div class="field">
+            <label for="auth-pass">Contraseña</label>
+            <input id="auth-pass" class="input" type="password" required minlength="6" autocomplete="${isLogin ? 'current-password' : 'new-password'}" placeholder="Mínimo 6 caracteres" />
+          </div>
+          <p id="auth-error" class="msg-line err" role="alert"></p>
+          <button id="auth-submit" class="btn btn-accent btn-block" type="submit">${isLogin ? 'Entrar' : 'Crear cuenta'}</button>
+        </form>
+        ${isLogin ? '<button class="link" data-act="resetPass">¿Has olvidado tu contraseña?</button>' : ''}
+      `);
+    }
+
+    function showAuthError(text) {
+      const el = $('auth-error');
+      if (el) el.textContent = text;
+    }
+
+    ACT.authSubmit = async () => {
+      const email = $('auth-email').value.trim();
+      const pass = $('auth-pass').value;
+      const btn = $('auth-submit');
+      btn.disabled = true;
+      showAuthError('');
+      const wasRegister = authMode === 'register';
+      try {
+        const cred = wasRegister
+          ? await createUserWithEmailAndPassword(auth, email, pass)
+          : await signInWithEmailAndPassword(auth, email, pass);
+        closeModal('auth-modal');
+        const name = (cred.user.displayName || cred.user.email || email).split('@')[0];
+        if (state.view === 'landing') playEnter('login', null, name);
+        else showToast(wasRegister ? '¡Cuenta creada!' : '¡Sesión iniciada!');
+      } catch (err) {
+        showAuthError(authErrorMessage(err));
+        btn.disabled = false;
+      }
+    };
+
+    ACT.resetPass = async () => {
+      const email = $('auth-email') ? $('auth-email').value.trim() : '';
+      if (!email) { showAuthError('Escribe tu correo arriba y vuelve a pulsar.'); return; }
+      try {
+        await sendPasswordResetEmail(auth, email);
+        closeModal('auth-modal');
+        showToast('Si el correo existe, recibirás un enlace para restablecer tu contraseña.');
+      } catch (err) {
+        showAuthError(authErrorMessage(err));
+      }
+    };
+
+    ACT.logout = async () => {
+      closeModal('settings-modal');
+      showLanding();
+      try {
+        await signOut(auth);
+        showToast('Has cerrado sesión.');
+      } catch (err) {
+        showToast('No se pudo cerrar sesión.', 'error');
+      }
+    };
+
+    // =========================================================================
+    // PLANES Y SUSCRIPCIONES (Stripe vía extensión de Firebase)
+    // =========================================================================
+    function planCardHtml(planId) {
+      const plan = PLANS_CONFIG[planId];
+      const current = getPlanId();
+      let action;
+      if (planId === current) {
+        action = '<button class="btn btn-ghost btn-block" disabled>Tu plan actual</button>';
+      } else if (PLAN_RANK[planId] < PLAN_RANK[current]) {
+        action = `<button class="btn btn-ghost btn-block" disabled>${planId === 'free' ? 'Plan base' : 'Incluido en tu plan'}</button>`;
+      } else {
+        const label = current === 'free' ? `Suscribirse por ${plan.price}` : `Cambiar a ${plan.name.replace('Plan ', '')}`;
+        action = `<button id="subscribe-${planId}" class="btn ${planId === 'pro' ? 'btn-gold' : 'btn-accent'} btn-block" data-act="subscribe" data-a="${planId}">${label}</button>`;
+      }
+      return `
+        <div class="plan ${planId === 'premium' ? 'pop' : ''} ${planId === 'pro' ? 'pro' : ''}">
+          ${planId === 'premium' ? '<span class="badge">Popular</span>' : ''}
+          <h4>${plan.name}</h4>
+          <div class="price">${plan.price} <small>/ mes</small></div>
+          <ul class="feat">
+            ${PLAN_FEATURES[planId].map((f) => `<li><i data-lucide="${f.icon}" class="ic" style="color:${f.tone}"></i><span>${f.html}</span></li>`).join('')}
+          </ul>
+          ${action}
+        </div>`;
+    }
+
+    function openPricingModal() {
+      closeModal('settings-modal');
+      openModal('pricing-modal', `
+        ${modalHead('Planes', 'Tus tokens se renuevan automáticamente cada 6 horas.', 'pricing-modal')}
+        <div class="plans">${planCardHtml('free')}${planCardHtml('premium')}${planCardHtml('pro')}</div>
+      `, 'wide');
+    }
+    ACT.openPricing = () => openPricingModal();
+
+    async function subscribePlan(planId) {
+      if (!state.user) {
+        showToast('Inicia sesión para activar una suscripción.', 'error');
+        closeModal('pricing-modal');
+        ACT.openAuth('login');
+        return;
+      }
+      // Si ya tiene un plan de pago, el cambio de plan se hace desde el portal de facturación
+      if (state.stripeRole) { await openCustomerPortal(); return; }
+      const priceId = STRIPE_PRICE_IDS[planId];
+      if (!priceId || priceId.indexOf('price_REEMPLAZA') === 0) {
+        showToast('Falta configurar el ID de precio de Stripe para este plan.', 'error');
+        return;
+      }
+
+      const btn = $('subscribe-' + planId);
+      const original = btn ? btn.textContent : '';
+      if (btn) { btn.disabled = true; btn.textContent = 'Abriendo el pago…'; }
+      const reset = () => { if (btn) { btn.disabled = false; btn.textContent = original; } };
+
+      try {
+        const ref = await addDoc(collection(db, 'customers', state.user.uid, 'checkout_sessions'), {
+          price: priceId,
+          success_url: window.location.origin + '/?checkout=success',
+          cancel_url: window.location.origin + '/?checkout=cancel',
+          allow_promotion_codes: true
+        });
+        let unsub = null;
+        const timer = setTimeout(() => {
+          if (unsub) unsub();
+          showToast('Stripe tardó demasiado en responder. Inténtalo de nuevo.', 'error');
+          reset();
+        }, 30000);
+        unsub = onSnapshot(ref, (snap) => {
+          const data = snap.data() || {};
+          if (data.error) {
+            clearTimeout(timer);
+            unsub();
+            showToast('No se pudo iniciar el pago. Inténtalo de nuevo.', 'error');
+            console.error('Stripe checkout:', data.error);
+            reset();
+          } else if (data.url) {
+            clearTimeout(timer);
+            unsub();
+            window.location.assign(data.url);
+          }
+        });
+      } catch (err) {
+        console.error('subscribePlan', err);
+        showToast('No se pudo iniciar el pago. Inténtalo de nuevo.', 'error');
+        reset();
+      }
+    }
+    ACT.subscribe = (planId) => subscribePlan(planId);
+
+    async function openCustomerPortal() {
+      if (!state.user) return;
+      try {
+        const fn = httpsCallable(getFunctions(app, STRIPE_FUNCTIONS_REGION), 'ext-firestore-stripe-payments-createPortalLink');
+        const { data } = await fn({ returnUrl: window.location.origin, locale: 'es' });
+        window.location.assign(data.url);
+      } catch (err) {
+        console.error('portal', err);
+        showToast('No se pudo abrir el portal de facturación. Inténtalo más tarde.', 'error');
+      }
+    }
+    ACT.portal = () => openCustomerPortal();
+
+    function handleCheckoutReturn() {
+      const params = new URLSearchParams(window.location.search);
+      const checkout = params.get('checkout');
+      if (!checkout) return;
+      try { window.history.replaceState(null, '', window.location.pathname); } catch (e) {}
+      state.autoEnter = true;
+      if (checkout === 'success') showToast('Pago recibido. Tu plan se activará en unos segundos.');
+      else showToast('Pago cancelado.', 'error');
+    }
+
+    // =========================================================================
+    // CUENTA Y SOPORTE PRO
+    // =========================================================================
+    ACT.openSettings = () => {
+      if (!state.user) return;
+      const plan = getPlan();
+      const sub = state.subscription;
+      const isPaid = getPlanId() !== 'free';
+      openModal('settings-modal', `
+        ${modalHead('Mi cuenta', '', 'settings-modal')}
+        <div class="kv">
+          <span style="overflow-wrap:anywhere"><b>Correo:</b> ${escapeHtml(state.user.email)}</span>
+          <span><b>Plan:</b> <span class="plan-name">${escapeHtml(plan.name)}</span></span>
+          <span><b>Tokens:</b> ${tokensLabel()}</span>
+          <span><b>Próxima recarga:</b> ${nextResetText()}</span>
+          ${sub && sub.periodEnd ? `<span><b>${sub.cancelAtPeriodEnd ? 'Finaliza el' : 'Se renueva el'}:</b> ${new Date(sub.periodEnd).toLocaleDateString('es-ES')}</span>` : ''}
+        </div>
+        <div class="stack">
+          ${isPaid
+            ? '<button class="btn btn-gold btn-block" data-act="portal">Gestionar suscripción</button>'
+            : '<button class="btn btn-gold btn-block" data-act="openPricing">Mejorar plan</button>'}
+          <button class="btn btn-ghost btn-block" data-act="openSupport">${ic(plan.support ? 'headphones' : 'lock', 'ic-s')}Soporte Pro</button>
+          <button class="btn btn-ghost btn-block" data-act="privSettings">${ic('key-round', 'ic-s')}Ajustes del Modo Privado</button>
+          <button class="btn btn-danger btn-block" data-act="logout">Cerrar sesión</button>
+        </div>
+      `);
+    };
+
+    const TICKET_STATUS = { open: 'Abierto', answered: 'Respondido', closed: 'Cerrado' };
+
+    ACT.openSupport = () => {
+      closeModal('settings-modal');
+      if (!state.user) { ACT.openAuth('login'); return; }
+      if (!getPlan().support) {
+        showToast('El soporte especializado está incluido en el Plan Pro.', 'error');
+        openPricingModal();
+        return;
+      }
+      openModal('support-modal', `
+        ${modalHead('Soporte Pro', 'Cuéntanos qué necesitas y te responderemos.', 'support-modal')}
+        <form data-submit="submitTicket">
+          <input id="ticket-subject" class="input" type="text" required maxlength="120" placeholder="Asunto" aria-label="Asunto" />
+          <textarea id="ticket-message" class="input area" required rows="5" maxlength="4000" placeholder="Describe tu consulta" aria-label="Mensaje"></textarea>
+          <button id="ticket-submit" class="btn btn-gold btn-block" type="submit">Enviar ticket</button>
+        </form>
+        <div class="stack">
+          <h4>Tus tickets</h4>
+          <div id="tickets-list" class="tickets">Cargando…</div>
+        </div>
+      `, 'mid');
+      loadTickets();
+    };
+
+    async function loadTickets() {
+      const box = $('tickets-list');
+      if (!box || !state.user) return;
+      try {
+        const snap = await getDocs(query(collection(db, 'pro_support_tickets'), where('uid', '==', state.user.uid)));
+        const tickets = [];
+        snap.forEach((d) => tickets.push({ id: d.id, ...d.data() }));
+        const ms = (t) => (t.createdAt && t.createdAt.toMillis ? t.createdAt.toMillis() : 0);
+        tickets.sort((a, b) => ms(b) - ms(a));
+        if (!tickets.length) { box.textContent = 'Todavía no has enviado ningún ticket.'; return; }
+        box.innerHTML = tickets.map((t) => `
+          <div class="ticket">
+            <span class="st">${escapeHtml(TICKET_STATUS[t.status] || t.status)}</span>
+            <b>${escapeHtml(t.subject)}</b>
+            <p>${escapeHtml(t.message)}</p>
+          </div>`).join('');
+      } catch (err) {
+        console.error('loadTickets', err);
+        box.textContent = 'No se pudieron cargar tus tickets.';
+      }
+    }
+
+    ACT.submitTicket = async () => {
+      const subject = $('ticket-subject').value.trim();
+      const message = $('ticket-message').value.trim();
+      if (!subject || !message) return;
+      const btn = $('ticket-submit');
+      btn.disabled = true;
+      try {
+        await withClaimRetry(() => addDoc(collection(db, 'pro_support_tickets'), {
+          uid: state.user.uid,
+          email: state.user.email,
+          subject,
+          message,
+          status: 'open',
+          createdAt: serverTimestamp()
+        }));
+        $('ticket-subject').value = '';
+        $('ticket-message').value = '';
+        showToast('Ticket enviado. Te responderemos lo antes posible.');
+        loadTickets();
+      } catch (err) {
+        console.error('submitTicket', err);
+        showToast('No se pudo enviar el ticket. Inténtalo de nuevo.', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    // =========================================================================
+    // MODO PRIVADO (users/{uid}/private_vault), contraseña opcional
+    // =========================================================================
+    function bufToB64(buf) {
+      const bytes = new Uint8Array(buf);
+      let s = '';
+      bytes.forEach((b) => { s += String.fromCharCode(b); });
+      return btoa(s);
+    }
+
+    function b64ToBytes(b64) {
+      const bin = atob(b64);
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    }
+
+    async function deriveHash(password, saltB64, iterations) {
+      if (!(window.crypto && window.crypto.subtle)) throw new Error('crypto-unavailable');
+      const keyMaterial = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+      const bits = await crypto.subtle.deriveBits(
+        { name: 'PBKDF2', salt: b64ToBytes(saltB64), iterations, hash: 'SHA-256' },
+        keyMaterial, 256
+      );
+      return bufToB64(bits);
+    }
+
+    async function createLockRecord(password) {
+      const salt = bufToB64(crypto.getRandomValues(new Uint8Array(16)));
+      const hash = await deriveHash(password, salt, PBKDF2_ITERATIONS);
+      return { salt, hash, iterations: PBKDF2_ITERATIONS };
+    }
+
+    function timingSafeEqual(a, b) {
+      if (a.length !== b.length) return false;
+      let r = 0;
+      for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+      return r === 0;
+    }
+
+    async function verifyPassword(password, lock) {
+      if (!lock || !lock.salt || !lock.hash) return false;
+      const hash = await deriveHash(password, lock.salt, lock.iterations || PBKDF2_ITERATIONS);
+      return timingSafeEqual(hash, lock.hash);
+    }
+
+    const lockRef = () => doc(db, 'users', state.user.uid, 'private_vault', LOCK_DOC_ID);
+    function isPrivateOpen() { return !(state.priv.lock && state.priv.lock.enabled) || state.priv.unlocked; }
+    function privActive() { return state.priv.items[state.priv.activeId] || null; }
+    function canUsePrivate() { return !!state.user && state.priv.status === 'ready' && isPrivateOpen(); }
+    function repaintPrivate() { renderTop(); renderSide(); renderMain(); }
+
+    async function loadPrivateLock() {
+      if (!state.user) return;
+      state.priv.status = 'loading';
+      try {
+        const snap = await getDoc(lockRef());
+        const d = snap.exists() ? snap.data() : null;
+        state.priv.lock = d && d.enabled && d.hash && d.salt
+          ? { enabled: true, salt: d.salt, hash: d.hash, iterations: d.iterations || PBKDF2_ITERATIONS }
+          : null;
+        state.priv.unlocked = false;
+        state.priv.status = 'ready';
+      } catch (err) {
+        console.error('loadPrivateLock', err);
+        state.priv.status = 'error';
+      }
+    }
+
+    async function loadPrivateItems() {
+      if (state.priv.itemsLoading || !state.user) return;
+      state.priv.itemsLoading = true;
+      state.priv.itemsError = false;
+      try {
+        const snap = await getDocs(collection(db, 'users', state.user.uid, 'private_vault'));
+        const items = {};
+        snap.forEach((d) => {
+          if (d.id === LOCK_DOC_ID || !isSafeId(d.id)) return;
+          const x = d.data();
+          if (x.type !== 'note' && x.type !== 'chat') return;
+          items[d.id] = {
+            id: d.id, type: x.type, title: x.title || '', body: x.body || '',
+            messages: Array.isArray(x.messages) ? x.messages : [],
+            createdAt: x.createdAt || 0, updatedAt: x.updatedAt || 0, saved: true
+          };
+        });
+        state.priv.items = items;
+        state.priv.itemsLoaded = true;
+      } catch (err) {
+        console.error('loadPrivateItems', err);
+        state.priv.itemsError = true;
+        showToast('No se pudo cargar el contenido privado.', 'error');
+      } finally {
+        state.priv.itemsLoading = false;
+      }
+      if (state.view === 'app' && state.activeMode === 'privado') repaintPrivate();
+    }
+
+    ACT.retryLock = async () => {
+      state.priv.status = 'loading';
+      renderMain();
+      await loadPrivateLock();
+      refreshAll();
+    };
+
+    ACT.retryItems = () => {
+      state.priv.itemsError = false;
+      loadPrivateItems();
+      renderMain();
+    };
+
+    ACT.lockPriv = () => {
+      state.priv.unlocked = false;
+      state.priv.items = {};
+      state.priv.itemsLoaded = false;
+      state.priv.activeId = null;
+      repaintPrivate();
+      showToast('Modo Privado bloqueado.');
+    };
+
+    ACT.unlockPriv = async () => {
+      const input = $('private-pass');
+      const err = $('private-pass-error');
+      const btn = $('private-unlock-btn');
+      const pass = input.value;
+      if (!pass) return;
+      const fail = (text) => { err.textContent = text; btn.disabled = false; input.value = ''; input.focus(); };
+      if (!(window.crypto && window.crypto.subtle)) { fail('Este navegador no permite verificar contraseñas (hace falta HTTPS).'); return; }
+      btn.disabled = true;
+      let ok = false;
+      try { ok = await verifyPassword(pass, state.priv.lock); } catch (e) { ok = false; }
+      if (!ok) { fail('Contraseña incorrecta.'); return; }
+      state.priv.unlocked = true;
+      repaintPrivate();
+    };
+
+    // ---- Barra lateral y cabecera del modo privado ----
+    function privateSideTop() {
+      if (!canUsePrivate()) return '<p class="fine">Tu diario y tus chats privados aparecerán aquí.</p>';
+      const tab = state.priv.tab;
+      return `
+        <div class="side-tabs">
+          <div class="seg">
+            <button class="${tab === 'diario' ? 'on' : ''}" data-act="privTab" data-a="diario">Diario</button>
+            <button class="${tab === 'chats' ? 'on' : ''}" data-act="privTab" data-a="chats">Chats</button>
+          </div>
+          <button class="btn btn-accent btn-block" data-act="newPriv" data-a="${tab === 'diario' ? 'note' : 'chat'}">${ic('plus')}${tab === 'diario' ? 'Nueva entrada' : 'Nuevo chat privado'}</button>
+        </div>`;
+    }
+
+    function privateSideList() {
+      if (!canUsePrivate() || !state.priv.itemsLoaded) return '';
+      const type = state.priv.tab === 'diario' ? 'note' : 'chat';
+      const items = Object.values(state.priv.items).filter((it) => it.type === type).sort((a, b) => b.updatedAt - a.updatedAt);
+      if (!items.length) return `<p class="side-empty">${type === 'note' ? 'Aún no tienes entradas.' : 'Aún no tienes chats privados.'}</p>`;
+      return items.map((it) => `
+        <div class="item ${state.priv.activeId === it.id ? 'on' : ''}">
+          <button class="item-main" data-act="selPriv" data-a="${it.id}"><span>${escapeHtml(it.title || 'Sin título')}</span></button>
+          <button class="del" data-act="delPriv" data-a="${it.id}" aria-label="Eliminar">${ic('trash-2', 'ic-s')}</button>
+        </div>`).join('');
+    }
+
+    function privTopButtons() {
+      if (!state.user || state.priv.status !== 'ready') return '';
+      const locked = state.priv.lock && state.priv.lock.enabled && state.priv.unlocked;
+      return (locked ? `<button class="icon-btn" data-act="lockPriv" aria-label="Bloquear ahora" title="Bloquear ahora">${ic('lock')}</button>` : '') +
+        `<button class="icon-btn" data-act="privSettings" aria-label="Ajustes del Modo Privado" title="Ajustes del Modo Privado">${ic('settings')}</button>`;
+    }
+
+    ACT.privTab = (tab) => {
+      state.priv.tab = tab;
+      const item = privActive();
+      if (item && item.type !== (tab === 'diario' ? 'note' : 'chat')) state.priv.activeId = null;
+      repaintPrivate();
+    };
+
+    ACT.selPriv = (id) => {
+      if (!state.priv.items[id]) return;
+      state.priv.activeId = id;
+      closeDrawerNow();
+      repaintPrivate();
+    };
+
+    ACT.newPriv = (type) => {
+      const now = Date.now();
+      const id = rid('p_');
+      state.priv.items[id] = type === 'note'
+        ? { id, type: 'note', title: '', body: '', messages: [], createdAt: now, updatedAt: now, saved: false }
+        : { id, type: 'chat', title: 'Nuevo chat privado', body: '', messages: [], createdAt: now, updatedAt: now, saved: false };
+      state.priv.tab = type === 'note' ? 'diario' : 'chats';
+      state.priv.activeId = id;
+      closeDrawerNow();
+      repaintPrivate();
+    };
+
+    async function savePrivateItem(item) {
+      const data = item.type === 'note'
+        ? { type: 'note', title: item.title, body: item.body, createdAt: item.createdAt, updatedAt: item.updatedAt }
+        : { type: 'chat', title: item.title, messages: cleanMessages(item.messages), createdAt: item.createdAt, updatedAt: item.updatedAt };
+      await setDoc(doc(db, 'users', state.user.uid, 'private_vault', item.id), data);
+      item.saved = true;
+    }
+
+    ACT.saveNote = async () => {
+      const item = privActive();
+      if (!item || item.type !== 'note') return;
+      item.title = $('note-title').value.trim();
+      item.body = $('note-body').value;
+      item.updatedAt = Date.now();
+      try {
+        await savePrivateItem(item);
+        showToast('Entrada guardada.');
+        renderTop();
+        renderSide();
+      } catch (err) {
+        console.error('savePrivateNote', err);
+        showToast('No se pudo guardar la entrada.', 'error');
+      }
+    };
+
+    ACT.delPriv = async (id) => {
+      const item = state.priv.items[id];
+      if (!item) return;
+      if (!window.confirm('¿Eliminar este elemento de tu Modo Privado? No se puede deshacer.')) return;
+      try {
+        if (item.saved) await deleteDoc(doc(db, 'users', state.user.uid, 'private_vault', id));
+        delete state.priv.items[id];
+        if (state.priv.activeId === id) state.priv.activeId = null;
+        repaintPrivate();
+      } catch (err) {
+        console.error('deletePrivateItem', err);
+        showToast('No se pudo eliminar.', 'error');
+      }
+    };
+
+    ACT.sendPrivate = async () => {
+      if (state.priv.generating) return;
+      const item = privActive();
+      if (!item || item.type !== 'chat') return;
+      const input = $('chat-input');
+      const text = input ? input.value.trim() : '';
+      if (!text) return;
+      if (!ensureTokens(PRIVATE_MODE.cost)) return;
+
+      resetInput();
+      if (!hasUserMsg(item.messages)) item.title = text.slice(0, 40) + (text.length > 40 ? '…' : '');
+
+      state.priv.generating = true;
+      const aiMsg = pushTurn(item, text, false);
+      renderTop();
+      renderSide();
+      renderThread('smooth');
+
+      let ok = true;
+      try {
+        aiMsg.content = await callAI({ system: modeSystem(PRIVATE_MODE), messages: historyFor(item) });
+      } catch (err) {
+        ok = false;
+        aiMsg.content = `⚠️ ${err.message}`;
+        aiMsg.error = true;
+      }
+      aiMsg.pending = false;
+      state.priv.generating = false;
+      item.updatedAt = Date.now();
+      if (state.activeMode === 'privado' && state.priv.activeId === item.id) renderThread('smooth');
+
+      if (ok) await chargeTokens(PRIVATE_MODE.cost);
+      try {
+        await savePrivateItem(item);
+      } catch (err) {
+        console.error('savePrivateChat', err);
+        showToast('No se pudo guardar el chat privado.', 'error');
+      }
+    };
+
+    // ---- Pantallas del modo privado ----
+    function privateNotice(icon, title, text, actionHtml) {
+      return `
+        <div class="center"><div class="card">
+          <div class="empty-ic">${ic(icon)}</div>
+          <div><h2>${title}</h2><p class="fine" style="margin-top:6px">${text}</p></div>
+          ${actionHtml || ''}
+        </div></div>`;
+    }
+
+    function renderPrivateMain(main) {
+      const p = state.priv;
+
+      if (!state.user) {
+        main.innerHTML = privateNotice('lock', 'Modo Privado', 'Inicia sesión para guardar tu diario y tus chats privados en tu cuenta.',
+          '<button class="btn btn-accent btn-block" data-act="openAuth">Iniciar sesión</button>');
+        icons(main);
+        return;
+      }
+      if (p.status === 'idle' || p.status === 'loading') {
+        main.innerHTML = `<div class="center">${ic('loader-2', 'spin')}</div>`;
+        icons(main);
+        return;
+      }
+      if (p.status === 'error') {
+        main.innerHTML = privateNotice('alert-circle', 'No se pudo cargar el Modo Privado', 'Revisa tu conexión e inténtalo de nuevo.',
+          '<button class="btn btn-ghost btn-block" data-act="retryLock">Reintentar</button>');
+        icons(main);
+        return;
+      }
+      if (!isPrivateOpen()) {
+        main.innerHTML = `
+          <div class="center">
+            <form class="card" data-submit="unlockPriv">
+              <div class="empty-ic">${ic('lock')}</div>
+              <div><h2>Modo Privado</h2><p class="fine" style="margin-top:6px">Introduce tu contraseña para ver tu diario y tus chats privados.</p></div>
+              <input id="private-pass" class="input" type="password" autocomplete="current-password" placeholder="Contraseña" aria-label="Contraseña del Modo Privado" />
+              <p id="private-pass-error" class="msg-line err" role="alert"></p>
+              <button id="private-unlock-btn" class="btn btn-accent btn-block" type="submit">Desbloquear</button>
+              <button type="button" class="link" data-act="forgotPriv">He olvidado la contraseña</button>
+            </form>
+          </div>`;
+        icons(main);
+        if (window.innerWidth >= 1024) setTimeout(() => { const i = $('private-pass'); if (i) i.focus(); }, 50);
+        return;
+      }
+      if (!p.itemsLoaded) {
+        if (p.itemsError) {
+          main.innerHTML = privateNotice('alert-circle', 'No se pudo cargar tu contenido', 'Revisa tu conexión e inténtalo de nuevo.',
+            '<button class="btn btn-ghost btn-block" data-act="retryItems">Reintentar</button>');
+        } else {
+          loadPrivateItems();
+          main.innerHTML = `<div class="center">${ic('loader-2', 'spin')}</div>`;
+        }
+        icons(main);
+        return;
+      }
+
+      const item = privActive();
+      if (!item) {
+        main.innerHTML = `
+          <div class="scroll"><div class="thread"><div class="empty">
+            <div class="empty-ic">${ic('lock')}</div>
+            <h2>Tu espacio privado</h2>
+            <p>Escribe en tu diario o conversa en privado. Elige un elemento de la lista o crea uno nuevo.</p>
+            <div class="sugg">
+              <button data-act="newPriv" data-a="note">Nueva entrada de diario</button>
+              <button data-act="newPriv" data-a="chat">Nuevo chat privado</button>
+            </div>
+          </div></div></div>`;
+        icons(main);
+        return;
+      }
+
+      if (item.type === 'note') {
+        main.innerHTML = `
+          <div class="scroll"><div class="note">
+            <input id="note-title" class="input title" type="text" maxlength="120" value="${escapeHtml(item.title)}" placeholder="Título" aria-label="Título" />
+            <textarea id="note-body" class="input area" maxlength="20000" placeholder="Escribe aquí…" aria-label="Texto de la entrada">${escapeHtml(item.body)}</textarea>
+            <div class="row-end">
+              <button class="btn btn-danger btn-sm" data-act="delPriv" data-a="${item.id}">Eliminar</button>
+              <button class="btn btn-accent btn-sm" data-act="saveNote">Guardar</button>
+            </div>
+          </div></div>`;
+        icons(main);
+        return;
+      }
+
+      main.innerHTML = `
+        <div class="chat">
+          <div class="scroll" id="scroll"><div class="thread" id="thread"></div></div>
+          ${dockHtml({ placeholder: 'Escribe en privado…', submit: 'sendPrivate', photo: false })}
+        </div>`;
+      renderThread('bottom');
+      icons(main);
+    }
+
+    // ---- Ajustes de la contraseña del Modo Privado ----
+    ACT.privSettings = () => {
+      closeModal('settings-modal');
+      if (!state.user) { ACT.openAuth('login'); return; }
+      if (state.priv.status !== 'ready') {
+        showToast('El Modo Privado no está disponible ahora mismo.', 'error');
+        return;
+      }
+      const enabled = !!(state.priv.lock && state.priv.lock.enabled);
+      const pwd = (id, ph, ac, extra = '') => `<input id="${id}" class="input" type="password" required ${extra} autocomplete="${ac}" placeholder="${ph}" aria-label="${ph}" />`;
+      const body = enabled ? `
+        <form data-submit="privLock" data-a="change">
+          <h4>Cambiar contraseña</h4>
+          ${pwd('plc-cur', 'Contraseña actual', 'current-password')}
+          ${pwd('plc-new', `Nueva contraseña (mínimo ${MIN_PASS} caracteres)`, 'new-password', `minlength="${MIN_PASS}"`)}
+          ${pwd('plc-new2', 'Repite la nueva contraseña', 'new-password')}
+          <button type="submit" class="btn btn-accent btn-block">Guardar nueva contraseña</button>
+        </form>
+        <form data-submit="privLock" data-a="disable">
+          <h4>Quitar la contraseña</h4>
+          ${pwd('pld-cur', 'Contraseña actual', 'current-password')}
+          <button type="submit" class="btn btn-danger btn-block">Desactivar contraseña</button>
+        </form>
+      ` : `
+        <form data-submit="privLock" data-a="enable">
+          <h4>Proteger con contraseña</h4>
+          ${pwd('ple-new', `Contraseña (mínimo ${MIN_PASS} caracteres)`, 'new-password', `minlength="${MIN_PASS}"`)}
+          ${pwd('ple-new2', 'Repite la contraseña', 'new-password')}
+          <button type="submit" class="btn btn-accent btn-block">Activar contraseña</button>
+        </form>
+      `;
+      openModal('private-settings-modal', `
+        ${modalHead('Modo Privado', enabled ? 'Protegido con contraseña.' : 'Ahora mismo no tiene contraseña.', 'private-settings-modal')}
+        ${body}
+        <p id="pl-msg" class="msg-line" role="alert"></p>
+      `);
+    };
+
+    ACT.privLock = async (action) => {
+      const val = (id) => ($(id) ? $(id).value : '');
+      const msg = (text, ok) => {
+        const el = $('pl-msg');
+        if (!el) return;
+        el.textContent = text;
+        el.className = 'msg-line ' + (ok ? 'ok' : 'err');
+      };
+      if (!(window.crypto && window.crypto.subtle)) { msg('Este navegador no permite gestionar contraseñas (hace falta HTTPS).'); return; }
+
+      try {
+        if (action === 'enable') {
+          const p1 = val('ple-new'), p2 = val('ple-new2');
+          if (p1.length < MIN_PASS) { msg(`La contraseña debe tener al menos ${MIN_PASS} caracteres.`); return; }
+          if (p1 !== p2) { msg('Las contraseñas no coinciden.'); return; }
+          const rec = await createLockRecord(p1);
+          await setDoc(lockRef(), { enabled: true, ...rec, updatedAt: Date.now() });
+          state.priv.lock = { enabled: true, ...rec };
+          state.priv.unlocked = true;
+          showToast('Contraseña del Modo Privado activada.');
+        } else if (action === 'change') {
+          const cur = val('plc-cur'), p1 = val('plc-new'), p2 = val('plc-new2');
+          if (!(await verifyPassword(cur, state.priv.lock))) { msg('La contraseña actual no es correcta.'); return; }
+          if (p1.length < MIN_PASS) { msg(`La nueva contraseña debe tener al menos ${MIN_PASS} caracteres.`); return; }
+          if (p1 !== p2) { msg('Las contraseñas nuevas no coinciden.'); return; }
+          const rec = await createLockRecord(p1);
+          await setDoc(lockRef(), { enabled: true, ...rec, updatedAt: Date.now() });
+          state.priv.lock = { enabled: true, ...rec };
+          showToast('Contraseña cambiada.');
+        } else if (action === 'disable') {
+          if (!(await verifyPassword(val('pld-cur'), state.priv.lock))) { msg('La contraseña actual no es correcta.'); return; }
+          await setDoc(lockRef(), { enabled: false, updatedAt: Date.now() });
+          state.priv.lock = null;
+          state.priv.unlocked = false;
+          showToast('Contraseña desactivada. El Modo Privado queda sin bloqueo.');
+        }
+        closeModal('private-settings-modal');
+        if (state.view === 'app') repaintPrivate();
+      } catch (err) {
+        console.error('privLock', err);
+        msg('No se pudo guardar el cambio. Inténtalo de nuevo.');
+      }
+    };
+
+    ACT.forgotPriv = () => {
+      openModal('forgot-private-modal', `
+        ${modalHead('Recuperar acceso', '', 'forgot-private-modal')}
+        <p class="fine">Confirma la contraseña de tu cuenta para quitar el bloqueo. Tu diario y tus chats privados no se borran; después podrás activar una contraseña nueva cuando quieras.</p>
+        <form data-submit="forgotSubmit">
+          <input id="fp-pass" class="input" type="password" required autocomplete="current-password" placeholder="Contraseña de tu cuenta" aria-label="Contraseña de tu cuenta" />
+          <p id="fp-error" class="msg-line err" role="alert"></p>
+          <button id="fp-btn" class="btn btn-accent btn-block" type="submit">Quitar bloqueo</button>
+        </form>
+      `);
+    };
+
+    ACT.forgotSubmit = async () => {
+      const pass = $('fp-pass').value;
+      const btn = $('fp-btn');
+      const errEl = $('fp-error');
+      btn.disabled = true;
+      try {
+        const cred = EmailAuthProvider.credential(auth.currentUser.email, pass);
+        await reauthenticateWithCredential(auth.currentUser, cred);
+        await setDoc(lockRef(), { enabled: false, updatedAt: Date.now() });
+        state.priv.lock = null;
+        state.priv.unlocked = false;
+        closeModal('forgot-private-modal');
+        showToast('Bloqueo del Modo Privado desactivado.');
+        repaintPrivate();
+      } catch (err) {
+        errEl.textContent = (err && (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential'))
+          ? 'La contraseña de la cuenta no es correcta.'
+          : 'No se pudo verificar tu identidad. Inténtalo de nuevo.';
+        btn.disabled = false;
+      }
+    };
+
+    // =========================================================================
+    // BIENVENIDA Y TRANSICIONES DE ENTRADA
+    // =========================================================================
+    const LANDING_ORDER = ['entreno', 'estudio', 'musica', 'videojuegos'];
+    let verbTimer = null;
+
+    function setLandingMode(m) {
+      const L = $('landing');
+      L.dataset.mode = m;
+      L.querySelectorAll('.verb').forEach((v) => {
+        const on = v.dataset.a === m;
+        v.classList.toggle('on', on);
+        v.setAttribute('aria-pressed', String(on));
+      });
+      L.querySelectorAll('.demo').forEach((d) => d.classList.toggle('on', d.dataset.m === m));
+    }
+
+    function stopVerbCycle() {
+      if (verbTimer) { clearInterval(verbTimer); verbTimer = null; }
+    }
+
+    function startVerbCycle() {
+      stopVerbCycle();
+      if (reduceMotion()) return;
+      verbTimer = setInterval(() => {
+        if (document.hidden || state.view !== 'landing') return;
+        const cur = LANDING_ORDER.indexOf($('landing').dataset.mode);
+        setLandingMode(LANDING_ORDER[(cur + 1) % LANDING_ORDER.length]);
+      }, 3400);
+    }
+
+    ACT.pickVerb = (m) => { stopVerbCycle(); setLandingMode(m); };
+
+    const niceName = (n) => (n ? n.charAt(0).toUpperCase() + n.slice(1) : '');
+
+    // Los botones de la bienvenida cambian según haya sesión o no
+    function updateLanding() {
+      const main = $('l-main-btn');
+      const alt = $('l-alt-btn');
+      const fine = $('l-fine');
+      if (!main) return;
+      if (state.user) {
+        main.textContent = `Continuar como ${niceName(state.user.name)}`;
+        main.dataset.act = 'enterUser';
+        alt.textContent = 'Cerrar sesión';
+        alt.dataset.act = 'logout';
+        fine.textContent = 'Tus chats y tus tokens te están esperando.';
+      } else {
+        main.textContent = 'Entrar como invitado';
+        main.dataset.act = 'enterGuest';
+        alt.textContent = 'Iniciar sesión';
+        alt.dataset.act = 'openAuth';
+        fine.textContent = `Como invitado tienes ${state.guestTokens} tokens. Con una cuenta gratis guardas tus chats y recibes ${PLANS_CONFIG.free.tokens} tokens cada 6 horas.`;
+      }
+    }
+
+    function showLanding() {
+      state.view = 'landing';
+      closeDrawerNow();
+      $('app').hidden = true;
+      $('landing').hidden = false;
+      updateLanding();
+      startVerbCycle();
+    }
+    ACT.goHome = () => showLanding();
+
+    // Cambia de la bienvenida a la aplicación (sin animación)
+    function goApp() {
+      stopVerbCycle();
+      state.view = 'app';
+      $('landing').hidden = true;
+      $('app').hidden = false;
+      buildApp();
+      ensureActiveChat();
+      paintApp();
+    }
+
+    // kind: 'guest' (ondas de color desde el botón) | 'login' (saludo y cierre en iris)
+    function playEnter(kind, origin, name) {
+      if (state.entering) return;
+      state.entering = true;
+      const fx = $('fx');
+      const app = $('app');
+      const finish = () => { fx.className = ''; fx.innerHTML = ''; state.entering = false; };
+      const swap = () => {
+        goApp();
+        app.classList.add('enter');
+        setTimeout(() => app.classList.remove('enter'), 1200);
+      };
+
+      if (reduceMotion()) { swap(); finish(); return; }
+      fx.className = 'on';
+
+      if (kind === 'guest') {
+        const o = origin || { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        fx.style.setProperty('--x', o.x + 'px');
+        fx.style.setProperty('--y', o.y + 'px');
+        const colors = ['var(--c-entreno)', 'var(--c-estudio)', 'var(--c-musica)', 'var(--c-juegos)', 'var(--ink)'];
+        fx.innerHTML = colors.map((c, i) => `<div class="wipe" style="background:${c};animation-delay:${i * 90}ms"></div>`).join('');
+        setTimeout(() => {
+          swap();
+          fx.style.transition = 'opacity .45s';
+          fx.style.opacity = '0';
+          setTimeout(() => { fx.style.transition = ''; fx.style.opacity = ''; finish(); }, 480);
+        }, 1020);
+      } else {
+        fx.innerHTML = `
+          <div class="welcome" id="welcome">
+            <svg class="ring" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="34"/><path d="M26 41l10 10 19-21"/></svg>
+            <h2>Hola, ${escapeHtml(niceName(name))}</h2>
+          </div>`;
+        setTimeout(() => {
+          swap();
+          const w = $('welcome');
+          if (w) w.classList.add('iris');
+          setTimeout(finish, 800);
+        }, 1700);
+      }
+    }
+
+    ACT.enterGuest = (a, el) => {
+      const r = el.getBoundingClientRect();
+      playEnter('guest', { x: r.left + r.width / 2, y: r.top + r.height / 2 });
+    };
+    ACT.enterUser = () => playEnter('login', null, state.user && state.user.name);
+
+    // =========================================================================
+    // INICIO
+    // =========================================================================
+    try {
+      const g = localStorage.getItem('krusse_guest_tokens');
+      if (g !== null && !Number.isNaN(parseInt(g, 10))) state.guestTokens = parseInt(g, 10);
+    } catch (e) {}
+
+    handleCheckoutReturn();
+    updateLanding();
+    startVerbCycle();
+    icons();
+    setInterval(checkSixHourReset, 60000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) checkSixHourReset(); });
+  </script>
+</body>
+</html>
