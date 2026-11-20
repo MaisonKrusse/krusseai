@@ -1,0 +1,149 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Solo cuentas con el correo verificado (Firebase Auth pone email_verified en el token
+    // tras abrir el enlace de verificación). Una cuenta sin verificar no lee ni escribe nada.
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Plan efectivo: rol de Stripe (custom claim "stripeRole" que pone la extensión)
+    // o plan escrito en users/{uid} por un administrador (Admin SDK). El cliente no puede escribir "plan".
+    function effectivePlan() {
+      let role = request.auth.token.get('stripeRole', 'free');
+      let docPlan = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('plan', 'free');
+      return (role == 'pro' || docPlan == 'pro') ? 'pro'
+           : ((role == 'premium' || docPlan == 'premium') ? 'premium' : 'free');
+    }
+
+    function tokenCap() {
+      let plan = effectivePlan();
+      return plan == 'pro' ? 10000 : (plan == 'premium' ? 2500 : 500);
+    }
+
+    // ---------------------------------------------------------------
+    // users/{userId}: plan y tokens son de solo lectura para el cliente
+    // ---------------------------------------------------------------
+    match /users/{userId} {
+
+      function changedKeys() {
+        return request.resource.data.diff(resource.data).affectedKeys();
+      }
+
+      // El cliente solo puede REDUCIR sus tokens
+      function spendTokens() {
+        return changedKeys().hasOnly(['tokens'])
+          && request.resource.data.tokens is int
+          && request.resource.data.tokens >= 0
+          && request.resource.data.tokens < resource.data.tokens;
+      }
+
+      // Recarga: solo cada 6 h (hora del servidor) y exactamente al límite de su plan
+      function resetTokens() {
+        return changedKeys().hasOnly(['tokens', 'lastResetAt', 'grantedCap'])
+          && request.resource.data.lastResetAt == request.time
+          && request.time >= resource.data.lastResetAt + duration.value(6, 'h')
+          && request.resource.data.tokens == tokenCap()
+          && request.resource.data.grantedCap == tokenCap();
+      }
+
+      // Al subir de plan: una única concesión del nuevo límite
+      function grantUpgrade() {
+        return changedKeys().hasOnly(['tokens', 'grantedCap'])
+          && tokenCap() > resource.data.grantedCap
+          && request.resource.data.tokens == tokenCap()
+          && request.resource.data.grantedCap == tokenCap();
+      }
+
+      allow read: if isOwner(userId);
+
+      // Alta del perfil: siempre plan gratis con el saldo base
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasOnly(['email', 'name', 'plan', 'tokens', 'grantedCap', 'lastResetAt', 'createdAt'])
+        && request.resource.data.keys().hasAll(['email', 'name', 'plan', 'tokens', 'grantedCap', 'lastResetAt', 'createdAt'])
+        && request.resource.data.email is string
+        && request.resource.data.name is string
+        && request.resource.data.plan == 'free'
+        && request.resource.data.tokens == 500
+        && request.resource.data.grantedCap == 500
+        && request.resource.data.lastResetAt == request.time
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if isOwner(userId)
+        && (spendTokens() || resetTokens() || grantUpgrade());
+
+      allow delete: if false;
+
+      // Subcolecciones privadas del usuario
+      match /chats/{chatId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /exams/{examId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /private_vault/{itemId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // ---------------------------------------------------------------
+    // Extensión "Run Payments with Stripe"
+    // ---------------------------------------------------------------
+    match /customers/{uid} {
+      allow read: if isOwner(uid);
+
+      match /checkout_sessions/{id} {
+        allow read, create: if isOwner(uid);
+      }
+
+      match /subscriptions/{id} {
+        allow read: if isOwner(uid);
+      }
+
+      match /payments/{id} {
+        allow read: if isOwner(uid);
+      }
+    }
+
+    match /products/{id} {
+      allow read: if true;
+
+      match /prices/{id} {
+        allow read: if true;
+      }
+
+      match /tax_rates/{id} {
+        allow read: if true;
+      }
+    }
+
+    // ---------------------------------------------------------------
+    // Soporte especializado (solo Plan Pro)
+    // ---------------------------------------------------------------
+    match /pro_support_tickets/{ticketId} {
+      allow create: if signedIn()
+        && effectivePlan() == 'pro'
+        && request.resource.data.keys().hasOnly(['uid', 'email', 'subject', 'message', 'status', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'open'
+        && request.resource.data.subject is string
+        && request.resource.data.subject.size() > 0
+        && request.resource.data.subject.size() <= 120
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 4000
+        && request.resource.data.createdAt == request.time;
+
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}
