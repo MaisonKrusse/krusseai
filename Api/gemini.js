@@ -3,14 +3,13 @@
 // y devuelve { text } usando por defecto el modelo más rápido y gratuito (gemini-2.5-flash-lite).
 
 const ALLOWED_MODELS = new Set([
-  'gemini-2.8-flash-lite',
-  'gemini-2.8-flash',
-  'gemini-2.8-pro',
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash-lite',
+  'gemini-3.6-flash',
   'gemini-3.8-flash',
-  'gemini-3.8-pro'
 ]);
 
-const DEFAULT_MODEL = 'gemini-2.8-flash-lite';
+const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 
 // Usa siempre gemini-2.5-flash-lite por defecto (el más rápido y con mayor cuota gratuita)
 // salvo que configures GEMINI_MODEL_FLASH o GEMINI_MODEL_PRO en Vercel.
