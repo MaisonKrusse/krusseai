@@ -3,20 +3,14 @@
 // y devuelve { text } usando la API de Gemini.
 
 const ALLOWED_MODELS = new Set([
-  'gemini-2.5-flash-lite',
-  'gemini-2.5-flash',
-  'gemini-2.5-pro',
   'gemini-3-flash-preview',
-  'gemini-3.1-pro-preview',
-  'gemini-3.5-flash',
-  'gemini-3.5-pro',
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash-lite',
   'gemini-3.6-flash',
-  'gemini-3.6-pro',
   'gemini-3.8-flash',
-  'gemini-3.8-pro'
 ]);
 
-const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 
 function resolveModel(requestedModel) {
   if (!requestedModel || typeof requestedModel !== 'string') return DEFAULT_MODEL;
